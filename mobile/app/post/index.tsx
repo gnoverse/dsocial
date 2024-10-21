@@ -6,7 +6,7 @@ import TextInput from "@gno/components/textinput";
 import { Stack, useNavigation, useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import { KeyboardAvoidingView, Platform } from "react-native";
-import { broadcastTxCommit, postTxAndRedirectToSign, selectAccount, selectQueryParamsTxJsonSigned, useAppDispatch, useAppSelector } from "@gno/redux";
+import { broadcastTxCommit, clearLinking, postTxAndRedirectToSign, selectAccount, selectQueryParamsTxJsonSigned, useAppDispatch, useAppSelector } from "@gno/redux";
 
 export default function Search() {
   const [postContent, setPostContent] = useState("");
@@ -22,27 +22,31 @@ export default function Search() {
 
   // hook to handle the signed tx from the Gnokey and broadcast it
   useEffect(() => {
-    if (txJsonSigned) {
-
-      const signedTx = decodeURIComponent(txJsonSigned as string)
-      console.log("signedTx: ", signedTx);
-
-      try {
-        setLoading(true);
-        dispatch(broadcastTxCommit(signedTx)).unwrap();
-        router.push("home");
-      } catch (error) {
-        console.error("on broadcastTxCommit", error);
-        setError("" + error);
-      } finally {
-        setLoading(false);
+    const handleSignedTx = async () => {
+      if (txJsonSigned) {
+        const signedTx = decodeURIComponent(txJsonSigned as string);
+        console.log("signedTx: ", signedTx);
+  
+        try {
+          setLoading(true);
+          await dispatch(clearLinking())
+          await dispatch(broadcastTxCommit(signedTx))
+          setTimeout(() => {
+            router.push("home");
+          }, 3000);
+        } catch (error) {
+          console.error("on broadcastTxCommit", error);
+          setError("" + error);
+        }
       }
-    }
+    };
+    handleSignedTx();
   }, [txJsonSigned]);
 
   useEffect(() => {
     const unsubscribe = navigation.addListener("focus", async () => {
       setPostContent("");
+      setLoading(false);
       if (!account) throw new Error("No active account");
     });
     return unsubscribe;
