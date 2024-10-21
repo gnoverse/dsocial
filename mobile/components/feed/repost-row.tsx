@@ -5,7 +5,7 @@ import Text from "@gno/components/text";
 import RepliesLabel from "./replies-label";
 import TimeStampLabel from "./timestamp-label";
 import RepostButton from "./repost-button";
-import { setPostToReply, useAppDispatch } from "@gno/redux";
+import { setPostToReply, useAppDispatch, setProfileAccountName } from "@gno/redux";
 import { useRouter } from "expo-router";
 import RepostLabel from "./repost-label";
 
@@ -21,13 +21,14 @@ export function RepostRow({ post, onPress = func, showFooter = true }: FeedProps
   const router = useRouter();
   const dispatch = useAppDispatch();
 
-  const onPressRepost = async (item: Post) => {
-    await dispatch(setPostToReply({ post: item }));
+  const onPressRepost = async (p: Post) => {
+    await dispatch(setPostToReply(p));
     router.navigate({ pathname: "/repost" });
   };
 
   const onPressName = async () => {
-    router.navigate({ pathname: "account", params: { accountName: post?.user.name } });
+    await dispatch(setProfileAccountName(post?.user.name)); 
+    router.navigate({ pathname: "account" });
   };
 
   if (!post) {
