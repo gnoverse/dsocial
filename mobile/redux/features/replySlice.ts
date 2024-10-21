@@ -1,8 +1,6 @@
-import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
+import { createAsyncThunk, createSlice, PayloadAction } from "@reduxjs/toolkit";
 import { makeCallTx } from "./linkingSlice";
 import { Post } from "@gno/types";
-import * as Linking from 'expo-linking';
-import { MakeTxResponse } from "@gnolang/gnonative";
 import { ThunkExtra } from "redux/redux-provider";
 
 export interface State {
@@ -13,17 +11,13 @@ const initialState: State = {
   postToReply: undefined,
 };
 
-export const setPostToReply = createAsyncThunk("post/reply", async ({ post }: { post: Post }) => {
-  return { post };
-});
-
 interface RepostTxAndRedirectParams {
   post: Post;
   replyContent: string;
   callerAddressBech32: string;
 }
 
-export const repostTxAndRedirectToSign = createAsyncThunk<MakeTxResponse, RepostTxAndRedirectParams, ThunkExtra>("tx/repostTxAndRedirectToSign", async (props, thunkAPI) => {
+export const repostTxAndRedirectToSign = createAsyncThunk<void, RepostTxAndRedirectParams, ThunkExtra>("tx/repostTxAndRedirectToSign", async (props, thunkAPI) => {
   const { post, replyContent, callerAddressBech32 } = props;
 
   const fnc = "RepostThread";
@@ -31,32 +25,43 @@ export const repostTxAndRedirectToSign = createAsyncThunk<MakeTxResponse, Repost
   const args: Array<string> = [String(post.user.address), String(post.id), replyContent];
   const gasFee = "1000000ugnot";
   const gasWanted = BigInt(10000000);
+  const reason = "Repost a message";
+  const callbackPath = "/repost";
 
-  const res = await makeCallTx({ fnc, args, gasFee, gasWanted, callerAddressBech32 }, thunkAPI.extra.gnonative);
+  await makeCallTx({ fnc, args, gasFee, gasWanted, callerAddressBech32, reason, callbackPath }, thunkAPI.extra.gnonative);
+})
 
-  setTimeout(() => {
-      const params = [`tx=${encodeURIComponent(res.txJson)}`, `address=${callerAddressBech32}`, `client_name=dSocial`, `reason=Repost a message`, `callback=${encodeURIComponent('tech.berty.dsocial://repost')}`];
-      Linking.openURL('land.gno.gnokey://tosign?' + params.join('&'))
-  }, 500)
+type ReplytTxAndRedirectParams = {
+  post: Post;
+  replyContent: string;
+  callerAddressBech32: string;
+  callbackPath: string;
+}
 
-  return res;
+export const replyTxAndRedirectToSign = createAsyncThunk<void, ReplytTxAndRedirectParams, ThunkExtra>("tx/replyTxAndRedirectToSign", async (props, thunkAPI) => {
+  const { post, replyContent, callerAddressBech32, callbackPath } = props;
+
+  const fnc = "PostReply";
+  const gasFee = "1000000ugnot";
+  const gasWanted = BigInt(10000000);
+  const args: Array<string> = [String(post.user.address), String(post.id), String(post.id), replyContent];
+  const reason = "Reply a message";
+
+  await makeCallTx({ fnc, args, gasFee, gasWanted, callerAddressBech32, reason, callbackPath }, thunkAPI.extra.gnonative);
 })
 
 export const replySlice = createSlice({
   name: "reply",
   initialState,
-  reducers: {},
+  reducers: {
+    setPostToReply: (state, action: PayloadAction<Post>) => {
+      state.postToReply = action.payload;
+    }
+  },
   selectors: {
     selectPostToReply: (state) => state.postToReply,
-  },
-  extraReducers(builder) {
-    builder.addCase(setPostToReply.fulfilled, (state, action) => {
-      state.postToReply = action.payload.post;
-    });
-    builder.addCase(setPostToReply.rejected, (state, action) => {
-      console.log("Error while replying a post, please, check the logs. %s", action.error.message);
-    });
-  },
+  }
 });
 
+export const { setPostToReply } = replySlice.actions;
 export const { selectPostToReply } = replySlice.selectors;

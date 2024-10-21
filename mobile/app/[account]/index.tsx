@@ -37,7 +37,7 @@ export default function Page() {
 
     (async () => {
       if (txJsonSigned) {
-        console.log("txJsonSigned: ", txJsonSigned);
+        console.log("txJsonSigned in [account] page: ", txJsonSigned);
         const signedTx = decodeURIComponent(txJsonSigned as string)
         try {
           await dispatch(broadcastTxCommit(signedTx)).unwrap();
@@ -126,8 +126,6 @@ export default function Page() {
   };
 
   const onPressUnfollow = async (address: string, callerAddress: Uint8Array) => {
-    console.log("xxx0", accountName)
-
     await dispatch(unfollowTxAndRedirectToSign({ address, callerAddress })).unwrap();
   };
 
@@ -137,20 +135,11 @@ export default function Page() {
 
     if (!currentUser) throw new Error("No active account");
 
-    dispatch(gnodTxAndRedirectToSign({ post, callerAddressBech32: currentUser.bech32, pathName })).unwrap();
-
-    // try {
-    //   await feed.onGnod(post, currentUser.address);
-    //   await fetchData();
-    // } catch (error) {
-    //   console.error("Error while adding reaction: " + error);
-    // } finally {
-    //   setLoading(undefined);
-    // }
+    dispatch(gnodTxAndRedirectToSign({ post, callerAddressBech32: currentUser.bech32, callbackPath: pathName })).unwrap();
   };
 
   const onPressPost = async (item: Post) => {
-    await dispatch(setPostToReply({ post: item }));
+    await dispatch(setPostToReply(item));
     // Posts come from the indexer, the address is a bech32 address.
     router.navigate({ pathname: "/post/[post_id]", params: { post_id: item.id, address: String(item.user.address) } });
   };

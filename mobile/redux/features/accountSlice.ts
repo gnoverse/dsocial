@@ -3,7 +3,6 @@ import { makeCallTx } from "./linkingSlice";
 import { User } from "@gno/types";
 import { GnoNativeApi } from "@gnolang/gnonative";
 import { ThunkExtra } from "redux/redux-provider";
-import * as Linking from 'expo-linking';
 
 export interface CounterState {
   account?: User;
@@ -45,22 +44,19 @@ interface AvatarCallTxParams {
   mimeType: string;
   base64: string;
   callerAddressBech32: string;
-  pathName: string;
+  callbackPath: string;
 }
 
 export const avatarTxAndRedirectToSign = createAsyncThunk<void, AvatarCallTxParams, ThunkExtra>("account/avatarTxAndRedirectToSign", async (props, thunkAPI) => {
-  const { mimeType, base64, callerAddressBech32, pathName } = props;
+  const { mimeType, base64, callerAddressBech32, callbackPath } = props;
 
   const gnonative = thunkAPI.extra.gnonative;
 
   const gasFee = "1000000ugnot";
   const gasWanted = BigInt(10000000);
-  const args: Array<string> = ["Avatar", String(`data:${mimeType};base64,` + base64)];
-  const res = await makeCallTx({ packagePath: "gno.land/r/demo/profile", fnc: "SetStringField", args, gasFee, gasWanted, callerAddressBech32 }, gnonative);
-
-  const params = [`tx=${encodeURIComponent(res.txJson)}`, `address=${callerAddressBech32}`, `client_name=dSocial`, `reason=Upload a new avatar`, `callback=${encodeURIComponent('tech.berty.dsocial://' + pathName)}`];
-  Linking.openURL('land.gno.gnokey://tosign?' + params.join('&'))
-
+  const args: Array<string> = ["Av  atar", String(`data:${mimeType};base64,` + base64)];
+  const reason = "Upload a new avatar";
+  await makeCallTx({ packagePath: "gno.land/r/demo/profile", fnc: "SetStringField", args, gasFee, gasWanted, callerAddressBech32, reason, callbackPath }, gnonative);
 });
 
 export const reloadAvatar = createAsyncThunk<string | undefined, void, ThunkExtra>("account/reloadAvatar", async (param, thunkAPI) => {

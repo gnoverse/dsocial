@@ -98,7 +98,7 @@ export default function Page() {
     }
 
     if (!account) throw new Error("No account found");
-    await dispatch(avatarTxAndRedirectToSign({ mimeType, base64: imageCompressed.base64, callerAddressBech32: account.bech32, pathName })).unwrap();
+    await dispatch(avatarTxAndRedirectToSign({ mimeType, base64: imageCompressed.base64, callerAddressBech32: account.bech32, callbackPath: pathName })).unwrap();
   }
 
   useEffect(() => {

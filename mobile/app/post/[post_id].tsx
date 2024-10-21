@@ -1,15 +1,14 @@
 import { useEffect, useState } from "react";
-import { useLocalSearchParams, usePathname, useRouter } from "expo-router";
+import { useNavigation, usePathname, useRouter } from "expo-router";
 import Text from "@gno/components/text";
-import { gnodTxAndRedirectToSign, selectAccount, selectPostToReply, useAppDispatch, useAppSelector } from "@gno/redux";
+import { broadcastTxCommit, clearLinking, gnodTxAndRedirectToSign, replyTxAndRedirectToSign, selectAccount, selectPostToReply, selectQueryParamsTxJsonSigned, useAppDispatch, useAppSelector } from "@gno/redux";
 import Layout from "@gno/components/layout";
 import TextInput from "@gno/components/textinput";
 import Button from "@gno/components/button";
 import Spacer from "@gno/components/spacer";
 import Alert from "@gno/components/alert";
-import { useGnoNativeContext } from "@gnolang/gnonative";
 import { PostRow } from "@gno/components/feed/post-row";
-import { FlatList, KeyboardAvoidingView, View, Alert as RNAlert } from "react-native";
+import { FlatList, KeyboardAvoidingView, View } from "react-native";
 import { Post } from "@gno/types";
 import { useFeed } from "@gno/hooks/use-feed";
 
@@ -19,30 +18,56 @@ function Page() {
   const [loading, setLoading] = useState<string | undefined>(undefined);
   const [posting, setPosting] = useState<boolean>(false);
   const [thread, setThread] = useState<Post[]>([]);
+
   const post = useAppSelector(selectPostToReply);
+  const txJsonSigned = useAppSelector(selectQueryParamsTxJsonSigned);
+  const account = useAppSelector(selectAccount);
+  const navigation = useNavigation();
 
   const feed = useFeed();
   const router = useRouter();
-  const { gnonative } = useGnoNativeContext();
-  const account = useAppSelector(selectAccount);
 
   const pathName = usePathname();
-  const params = useLocalSearchParams();
-  const { post_id, address } = params;
 
   const dispatch = useAppDispatch();
 
   useEffect(() => {
+    const unsubscribe = navigation.addListener("focus", async () => {
+      await fetchData();
+    });
+    return unsubscribe;
+  }, [navigation]);
+
+  useEffect(() => {
     fetchData();
-  }, [post_id]);
+  }, [post]);
+
+  useEffect(() => {
+
+    (async () => {
+      if (txJsonSigned) {
+        console.log("txJsonSigned in [post_id] screen:", txJsonSigned);
+        const signedTx = decodeURIComponent(txJsonSigned as string)
+        try {
+          dispatch(clearLinking());
+          await dispatch(broadcastTxCommit(signedTx)).unwrap();
+        } catch (error) {
+          console.error("on broadcastTxCommit", error);
+        } finally {
+          fetchData();
+        }
+      }
+    })();
+
+  }, [txJsonSigned]);
 
   const fetchData = async () => {
     if (!post) return;
 
-    console.log("fetching post: ", post_id, address);
+    console.log("fetching post: ", post.user.address);
     setLoading("Loading post...");
     try {
-      const thread = await feed.fetchThread(address as string, Number(post_id));
+      const thread = await feed.fetchThread(String(post.user.address), Number(post.id));
       setThread(thread.data);
     } catch (error) {
       console.error("failed on [post_id].tsx screen", error);
@@ -62,15 +87,7 @@ function Page() {
     if (!account) throw new Error("No active account"); // never happens, but just in case
 
     try {
-      const gasFee = "1000000ugnot";
-      const gasWanted = BigInt(10000000);
-
-      // Post objects comes from the indexer, address is a bech32 address
-      const args: Array<string> = [String(post.user.address), String(post.id), String(post.id), replyContent];
-      for await (const response of await gnonative.call("gno.land/r/berty/social", "PostReply", args, gasFee, gasWanted, account.address)) {
-        console.log("response ono post screen: ", response);
-      }
-
+      await dispatch(replyTxAndRedirectToSign({ post, replyContent, callerAddressBech32: account.bech32, callbackPath: pathName })).unwrap();
       setReplyContent("");
       await fetchData();
     } catch (error) {
@@ -86,12 +103,11 @@ function Page() {
   };
 
   const onGnod = async (post: Post) => {
-    console.log("gnodding post: ", post);
     if (!account) throw new Error("No active account");
-    dispatch(gnodTxAndRedirectToSign({ post, callerAddressBech32: account.bech32, pathName }))
+    dispatch(gnodTxAndRedirectToSign({ post, callerAddressBech32: account.bech32, callbackPath: pathName }))
   };
 
-  if (!post) {
+  if (!post || !post.user) {
     return (
       <Layout.Container>
         <Layout.Header title="Post" iconType="back" />

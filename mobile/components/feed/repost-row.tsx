@@ -21,8 +21,8 @@ export function RepostRow({ post, onPress = func, showFooter = true }: FeedProps
   const router = useRouter();
   const dispatch = useAppDispatch();
 
-  const onPressRepost = async (item: Post) => {
-    await dispatch(setPostToReply({ post: item }));
+  const onPressRepost = async (p: Post) => {
+    await dispatch(setPostToReply(p));
     router.navigate({ pathname: "/repost" });
   };
 

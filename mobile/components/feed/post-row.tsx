@@ -26,8 +26,8 @@ export function PostRow({ post, onPress = func, onGnod = func, showFooter = true
   const dispatch = useAppDispatch();
   const isRepost = post?.repost_parent;
 
-  const onPressRepost = async (item: Post) => {
-    await dispatch(setPostToReply({ post: item }));
+  const onPressRepost = async (p: Post) => {
+    await dispatch(setPostToReply(p));
     router.navigate({ pathname: "/repost" });
   };
 

@@ -48,14 +48,14 @@ export default function Page() {
     router.navigate({ pathname: "/post" });
   };
 
-  const onPress = async (item: Post) => {
-    await dispatch(setPostToReply({ post: item }));
-    router.navigate({ pathname: "/post/[post_id]", params: { post_id: item.id, address: item.user.bech32 } });
+  const onPress = async (p: Post) => {
+    await dispatch(setPostToReply(p));
+    router.navigate({ pathname: "/post/[post_id]" });
   };
 
   const onGnod = async (post: Post) => {
     if (!account) throw new Error("No active account");
-    dispatch(gnodTxAndRedirectToSign({ post, callerAddressBech32: account.bech32, pathName })).unwrap();
+    dispatch(gnodTxAndRedirectToSign({ post, callerAddressBech32: account.bech32, callbackPath: pathName })).unwrap();
   };
 
   if (isLoading)

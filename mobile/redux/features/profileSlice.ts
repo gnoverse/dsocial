@@ -2,7 +2,6 @@ import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
 import { makeCallTx } from "./linkingSlice";
 import { Following } from "@gno/types";
 import { ThunkExtra } from "redux/redux-provider";
-import * as Linking from 'expo-linking';
 
 const CLIENT_NAME_PARAM = 'client_name=dSocial';
 
@@ -32,13 +31,10 @@ export const followTxAndRedirectToSign = createAsyncThunk<void, { address: strin
   const gasFee = "1000000ugnot";
   const gasWanted = BigInt(10000000);
   const callerAddressBech32 = await gnonative.addressToBech32(callerAddress);
+  const reason = "Follow a user";
+  const callbackPath = "/account";
 
-  const res = await makeCallTx({ fnc, args, gasFee, gasWanted, callerAddressBech32 }, thunkAPI.extra.gnonative);
-
-  setTimeout(() => {
-    const params = [`tx=${encodeURIComponent(res.txJson)}`, `address=${callerAddressBech32}`, CLIENT_NAME_PARAM, 'reason=Follow a user', `callback=${encodeURIComponent('tech.berty.dsocial://account')}`];
-    Linking.openURL('land.gno.gnokey://tosign?' + params.join('&'))
-  }, 500)
+  await makeCallTx({ fnc, args, gasFee, gasWanted, callerAddressBech32, reason, callbackPath }, thunkAPI.extra.gnonative);
 });
 
 export const unfollowTxAndRedirectToSign = createAsyncThunk<void, { address: string, callerAddress: Uint8Array }, ThunkExtra>("profile/follow", async ({ address, callerAddress }, thunkAPI) => {
@@ -50,13 +46,10 @@ export const unfollowTxAndRedirectToSign = createAsyncThunk<void, { address: str
   const gasFee = "1000000ugnot";
   const gasWanted = BigInt(10000000);
   const callerAddressBech32 = await gnonative.addressToBech32(callerAddress);
+  const reason = "Unfollow a user";
+  const callbackPath = "/account";
 
-  const res = await makeCallTx({ fnc, args, gasFee, gasWanted, callerAddressBech32 }, thunkAPI.extra.gnonative);
-
-  setTimeout(() => {
-    const params = [`tx=${encodeURIComponent(res.txJson)}`, `address=${callerAddressBech32}`, CLIENT_NAME_PARAM, 'reason=Unfollow a user', `callback=${encodeURIComponent('tech.berty.dsocial://account')}`];
-    Linking.openURL('land.gno.gnokey://tosign?' + params.join('&'))
-  }, 500)
+  await makeCallTx({ fnc, args, gasFee, gasWanted, callerAddressBech32, reason, callbackPath }, thunkAPI.extra.gnonative);
 });
 
 export const setFollows = createAsyncThunk("profile/setFollows", async ({ following, followers }: FollowsProps, _) => {
