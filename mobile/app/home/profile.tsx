@@ -87,6 +87,7 @@ export default function Page() {
   };
 
   const onPressLogout = async () => {
+    dispatch(clearLinking());
     dispatch(logedOut());
   };
 

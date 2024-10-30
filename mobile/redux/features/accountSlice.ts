@@ -33,11 +33,17 @@ export const loggedIn = createAsyncThunk<User, LoginParam, ThunkExtra>("account/
 });
 
 async function getAccountName(bech32: string, gnonative: GnoNativeApi) {
-  const accountNameStr = await gnonative.qEval("gno.land/r/demo/users", `GetUserByAddress("${bech32}").Name`);
-  console.log("GetUserByAddress result:", accountNameStr);
-  const accountName = accountNameStr.match(/\("(\w+)"/)?.[1];
-  console.log("GetUserByAddress after regex", accountName);
-  return accountName
+  try {
+    console.log("GetUserByAddress request:", bech32);
+    const accountNameStr = await gnonative.qEval("gno.land/r/demo/users", `GetUserByAddress("${bech32}").Name`);
+    console.log("GetUserByAddress result:", accountNameStr);
+    const accountName = accountNameStr.match(/\("(\w+)"/)?.[1];
+    console.log("GetUserByAddress after regex", accountName);
+    return accountName
+  } catch (error) {
+      console.error("Error getting account name", error);
+  }
+  return undefined;
 }
 
 interface AvatarCallTxParams {
