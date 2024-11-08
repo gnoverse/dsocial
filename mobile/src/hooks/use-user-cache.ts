@@ -3,7 +3,7 @@ import { useGnoNativeContext } from "@gnolang/gnonative";
 
 const usersCache = new Map<string, User>();
 
-const DEFAULT_AVATAR = "https://www.gravatar.com/avatar/tmp"
+const DEFAULT_AVATAR = "undefined"
 
 export const useUserCache = () => {
   const { gnonative } = useGnoNativeContext();

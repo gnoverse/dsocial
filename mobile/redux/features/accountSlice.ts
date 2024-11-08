@@ -78,11 +78,12 @@ export const reloadAvatar = createAsyncThunk<string | undefined, void, ThunkExtr
 
 const loadBech32AvatarFromChain = async (bech32: string, thunkAPI: ThunkExtra) => {
   const gnonative = thunkAPI.extra.gnonative as GnoNativeApi;
-  const DEFAULT_AVATAR = "https://www.gravatar.com/avatar/tmp"
+  const DEFAULT_AVATAR = "undefined"
 
   try {
     console.log("Loading avatar for", bech32);
     const response = await gnonative.qEval("gno.land/r/demo/profile", `GetStringField("${bech32}","Avatar", "${DEFAULT_AVATAR}")`);
+    console.log("Loaded avatar", response);
     return response.substring(2, response.length - "\" string)".length);
   } catch (error) {
     console.error("Error loading avatar", error);

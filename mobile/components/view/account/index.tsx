@@ -42,13 +42,11 @@ function AccountView(props: Props) {
 
   const isFollowed = useMemo(() => followers.find((f) => f.address.toString() === currentUser.bech32) != null, [user, followers]);
 
-  const avarUri = user.avatar ? user.avatar : "https://www.gravatar.com/avatar/tmp";
-
   return (
     <>
       <View style={styles.container}>
         <View style={styles.banner}>
-          <Avatar uri={avarUri} style={styles.avatar} />
+          <Avatar uri={user.avatar} style={styles.avatar} />
         </View>
 
         <View style={styles.followButtonRow}>

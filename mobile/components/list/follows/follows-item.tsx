@@ -1,6 +1,7 @@
-import { Image, StyleSheet, TouchableOpacity, View } from "react-native";
+import { StyleSheet, TouchableOpacity, View } from "react-native";
 import Text from "@gno/components/text";
 import { Following } from "@gno/types";
+import Avatar from "@gno/components/avatar/avatar";
 
 type Props = {
   item: Following;
@@ -10,7 +11,7 @@ type Props = {
 function FollowsItem({ item, onPress }: Props) {
   return (
     <TouchableOpacity onPress={() => onPress(item)} style={styles.container}>
-      <Image source={{ uri: "https://www.gravatar.com/avatar/tmp" }} style={{ width: 48, height: 48, borderRadius: 24 }} />
+      <Avatar style={{ width: 48, height: 48, borderRadius: 24 }} />
       <View style={styles.textBox}>
         <Text.Body style={styles.name}>@{item.user?.name}</Text.Body>
         <Text.Caption1 numberOfLines={1} ellipsizeMode="tail" style={styles.caption}>

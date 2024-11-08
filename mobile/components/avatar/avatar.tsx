@@ -1,14 +1,18 @@
 import { View, Image, StyleSheet, StyleProp, ImageStyle } from "react-native";
 
 interface Props {
-  uri: string;
+  uri?: string;
   style?: StyleProp<ImageStyle>;
 }
 
+const defaultAvatar = require("../../assets/images/icon.png");
+
 const Avatar: React.FC<Props> = ({ uri, style }) => {
+  const hasUri = uri && uri.length > 0 && uri !== "undefined";
+
   return (
     <View>
-      <Image source={{ uri }} style={[styles.image, style]} />
+      <Image source={hasUri ? { uri } : defaultAvatar} style={[styles.image, style]} />
     </View>
   );
 };

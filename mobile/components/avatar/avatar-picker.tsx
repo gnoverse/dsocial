@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { TouchableOpacity } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { selectAvatar, useAppSelector } from "@gno/redux";
@@ -9,7 +9,6 @@ interface Props {
 }
 
 const AvatarPicker: React.FC<Props> = ({onChanged}) => {
-  const [base64Image, setBase64Image] = useState<string | null>(null);
 
   const avatarBase64 = useAppSelector(selectAvatar);
 
@@ -32,7 +31,6 @@ const AvatarPicker: React.FC<Props> = ({onChanged}) => {
 
   return (
     <TouchableOpacity onPress={pickImage} >
-      {base64Image ? <Avatar uri={base64Image} /> : null}
       {avatarBase64 ? <Avatar uri={avatarBase64} /> : null}
     </TouchableOpacity>
   )
