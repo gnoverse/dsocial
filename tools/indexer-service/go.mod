@@ -3,7 +3,7 @@ module github.com/gnoverse/dsocial/tools/indexer-service
 go 1.21
 
 require (
-	connectrpc.com/connect v1.16.2
+	connectrpc.com/connect v1.17.0
 	connectrpc.com/grpchealth v1.2.0
 	connectrpc.com/grpcreflect v1.2.0
 	github.com/Khan/genqlient v0.7.0
@@ -14,7 +14,7 @@ require (
 	go.uber.org/zap v1.26.0
 	golang.org/x/net v0.23.0
 	golang.org/x/xerrors v0.0.0-20200804184101-5ec99f83aff1
-	google.golang.org/protobuf v1.33.0
+	google.golang.org/protobuf v1.34.2
 	moul.io/u v1.27.0
 )
 
