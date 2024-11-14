@@ -8,6 +8,7 @@ import (
 
 	"gno.land/p/demo/avl"
 	"gno.land/p/demo/ufmt"
+	"gno.land/p/moul/txlink"
 )
 
 var debugNowOffset time.Duration
@@ -182,27 +183,25 @@ func (post *Post) GetURL() string {
 }
 
 func (post *Post) GetGnodFormURL() string {
-	return "/r/berty/social?help&__func=AddReaction" +
-		"&userPostsAddr=" + post.userPosts.userAddr.String() +
-		"&threadid=" + post.threadID.String() +
-		"&postid=" + post.id.String() +
-		"&reaction=" + strconv.Itoa(int(Gnod))
+	return txlink.URL("AddReaction",
+		"userPostsAddr", post.userPosts.userAddr.String(),
+		"threadid", post.threadID.String(),
+		"postid", post.id.String(),
+		"reaction", strconv.Itoa(int(Gnod)))
 }
 
 func (post *Post) GetReplyFormURL() string {
-	return "/r/berty/social?help&__func=PostReply" +
-		"&userPostsAddr=" + post.userPosts.userAddr.String() +
-		"&threadid=" + post.threadID.String() +
-		"&postid=" + post.id.String() +
-		"&comment.type=textarea"
+	return txlink.URL("PostReply",
+		"userPostsAddr", post.userPosts.userAddr.String(),
+		"threadid", post.threadID.String(),
+		"postid", post.id.String())
 }
 
 func (post *Post) GetRepostFormURL() string {
-	return "/r/berty/social?help&__func=RepostThread" +
-		"&userPostsAddr=" + post.userPosts.userAddr.String() +
-		"&threadid=" + post.threadID.String() +
-		"&postid=" + post.id.String() +
-		"&body.type=textarea"
+	return txlink.URL("RepostThread",
+		"userPostsAddr", post.userPosts.userAddr.String(),
+		"threadid", post.threadID.String(),
+		"postid", post.id.String())
 }
 
 func (post *Post) RenderSummary() string {

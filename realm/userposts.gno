@@ -10,6 +10,7 @@ import (
 
 	"gno.land/p/demo/avl"
 	"gno.land/p/demo/ufmt"
+	"gno.land/p/moul/txlink"
 	"gno.land/r/demo/users"
 )
 
@@ -208,23 +209,19 @@ func (userPosts *UserPosts) GetURLFromThreadAndReplyID(threadID, replyID PostID)
 }
 
 func (userPosts *UserPosts) GetPostFormURL() string {
-	return "/r/berty/social?help&__func=PostMessage" +
-		"&body.type=textarea"
+	return txlink.URL("PostMessage")
 }
 
 func (userPosts *UserPosts) GetFollowFormURL() string {
-	return "/r/berty/social?help&__func=Follow" +
-		"&followedAddr=" + userPosts.userAddr.String()
+	return txlink.URL("Follow", "followedAddr", userPosts.userAddr.String())
 }
 
 func (userPosts *UserPosts) GetUnfollowFormURL(followedAddr std.Address) string {
-	return "/r/berty/social?help&__func=Unfollow" +
-		"&followedAddr=" + followedAddr.String()
+	return txlink.URL("Unfollow", "followedAddr", followedAddr.String())
 }
 
 func (userPosts *UserPosts) GetRefreshFormURL() string {
-	return "/r/berty/social?help&__func=RefreshHomePosts" +
-		"&userPostsAddr=" + userPosts.userAddr.String()
+	return txlink.URL("RefreshHomePosts", "userPostsAddr", userPosts.userAddr.String())
 }
 
 // Scan userPosts.following for all posts from all followed users starting from lastRefreshId+1 .
