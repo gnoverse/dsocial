@@ -8,7 +8,7 @@ import (
 	connect "connectrpc.com/connect"
 	context "context"
 	errors "errors"
-	_go "github.com/gnolang/dsocial/tools/indexer-service/api/gen/go"
+	_go "github.com/gnoverse/dsocial/tools/indexer-service/api/gen/go"
 	http "net/http"
 	strings "strings"
 )

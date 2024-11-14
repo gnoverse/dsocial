@@ -59,7 +59,7 @@ tx-indexer.build: tx-indexer.pull
 .PHONY: tx-indexer.build
 
 indexer:
-	git clone https://github.com/gnolang/dsocial.git
+	git clone https://github.com/gnoverse/dsocial.git
 
 indexer.pull: indexer
 	cd indexer; git pull

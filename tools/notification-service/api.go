@@ -9,7 +9,7 @@ import (
 	"connectrpc.com/connect"
 	"go.uber.org/zap"
 
-	api_gen "github.com/gnolang/dsocial/tools/notification-service/api/gen/go"
+	api_gen "github.com/gnoverse/dsocial/tools/notification-service/api/gen/go"
 	"github.com/pkg/errors"
 )
 

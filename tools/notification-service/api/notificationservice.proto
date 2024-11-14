@@ -2,7 +2,7 @@ syntax = "proto3";
 
 package land.gno.dsocial.notificationservice.v1;
 
-option go_package = "github.com/gnolang/dsocial/tools/notification-service/api/gen/go";
+option go_package = "github.com/gnoverse/dsocial/tools/notification-service/api/gen/go";
 option objc_class_prefix = "RTG";
 
 // NotificationService is the service to manage Push Notifications in your app.

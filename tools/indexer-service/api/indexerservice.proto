@@ -2,7 +2,7 @@ syntax = "proto3";
 
 package land.gno.dsocial.indexerservice.v1;
 
-option go_package = "github.com/gnolang/dsocial/tools/indexer-service/api/gen/go";
+option go_package = "github.com/gnoverse/dsocial/tools/indexer-service/api/gen/go";
 option objc_class_prefix = "RTG";
 
 // IndexerService is the service to interact with the dSocial Indexer

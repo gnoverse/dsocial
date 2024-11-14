@@ -8,7 +8,7 @@ import (
 	"sync"
 
 	"github.com/Khan/genqlient/graphql"
-	api_gen "github.com/gnolang/dsocial/tools/indexer-service/api/gen/go"
+	api_gen "github.com/gnoverse/dsocial/tools/indexer-service/api/gen/go"
 	"go.uber.org/zap"
 )
 

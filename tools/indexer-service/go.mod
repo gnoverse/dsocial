@@ -1,4 +1,4 @@
-module github.com/gnolang/dsocial/tools/indexer-service
+module github.com/gnoverse/dsocial/tools/indexer-service
 
 go 1.21
 

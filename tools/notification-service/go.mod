@@ -1,4 +1,4 @@
-module github.com/gnolang/dsocial/tools/notification-service
+module github.com/gnoverse/dsocial/tools/notification-service
 
 go 1.21.7
 
