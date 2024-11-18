@@ -16,8 +16,8 @@ const initialState: State = {
 
 export const requestLoginForGnokeyMobile = createAsyncThunk<boolean>("tx/requestLoginForGnokeyMobile", async () => {
     console.log("requesting login for GnokeyMobile");
-    const callback = encodeURIComponent('tech.berty.dsocial://login-callback');
-    return await Linking.openURL(`land.gno.gnokey://tologin?callback=${callback}`);
+    const callback = encodeURIComponent('tech.berty.dsocial://signin-callback');
+    return await Linking.openURL(`land.gno.gnokey://tosignin?callback=${callback}`);
 })
 
 type MakeTxAndRedirectParams = {
