@@ -15,9 +15,10 @@ const initialState: State = {
 };
 
 export const requestLoginForGnokeyMobile = createAsyncThunk<boolean>("tx/requestLoginForGnokeyMobile", async () => {
-    console.log("requesting login for GnokeyMobile");
-    const callback = encodeURIComponent('tech.berty.dsocial://signin-callback');
-    return await Linking.openURL(`land.gno.gnokey://tosignin?callback=${callback}`);
+    const url = new URL('land.gno.gnokey://tosignin');
+    url.searchParams.append('callback', 'tech.berty.dsocial://signin-callback');
+    console.log("redirecting to: ", url);
+    return await Linking.openURL(url.toString());
 })
 
 type MakeTxAndRedirectParams = {
@@ -59,8 +60,14 @@ export const makeCallTx = async (props: MakeCallTxParams, gnonative: GnoNativeAp
 
     const res =  await gnonative.makeCallTx(packagePath, fnc, args, gasFee, gasWanted, address)
 
-    const params = [`tx=${encodeURIComponent(res.txJson)}`, `address=${callerAddressBech32}`, `client_name=dSocial`, `reason=${reason}`, `callback=${encodeURIComponent('tech.berty.dsocial:/' + callbackPath)}`];
-    Linking.openURL('land.gno.gnokey://tosign?' + params.join('&'))
+    const url = new URL('land.gno.gnokey://tosign');
+    url.searchParams.append('tx', res.txJson);
+    url.searchParams.append('address', callerAddressBech32);
+    url.searchParams.append('client_name', 'dSocial');
+    url.searchParams.append('reason', reason);
+    url.searchParams.append('callback', 'tech.berty.dsocial:/' + callbackPath);
+    console.log("redirecting to: ", url);
+    Linking.openURL(url.toString());
 }
 
 export const broadcastTxCommit = createAsyncThunk<void, string, ThunkExtra>("tx/broadcastTxCommit", async (signedTx, thunkAPI) => {
