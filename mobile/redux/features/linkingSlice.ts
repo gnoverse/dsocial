@@ -61,6 +61,8 @@ export const makeCallTx = async (props: MakeCallTxParams, gnonative: GnoNativeAp
     const res =  await gnonative.makeCallTx(packagePath, fnc, args, gasFee, gasWanted, address)
 
     const url = new URL('land.gno.gnokey://tosign');
+    url.searchParams.append('chain_id', await gnonative.getChainID());
+    url.searchParams.append('remote', await gnonative.getRemote());
     url.searchParams.append('tx', res.txJson);
     url.searchParams.append('address', callerAddressBech32);
     url.searchParams.append('client_name', 'dSocial');
