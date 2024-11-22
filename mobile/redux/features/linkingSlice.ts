@@ -17,6 +17,7 @@ const initialState: State = {
 export const requestLoginForGnokeyMobile = createAsyncThunk<boolean>("tx/requestLoginForGnokeyMobile", async () => {
     const url = new URL('land.gno.gnokey://tosignin');
     url.searchParams.append('callback', 'tech.berty.dsocial://signin-callback');
+    url.searchParams.append('client_name', 'dSocial');
     console.log("redirecting to: ", url);
     return await Linking.openURL(url.toString());
 })
