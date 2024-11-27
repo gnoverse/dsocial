@@ -11,8 +11,6 @@ import (
 	"gno.land/p/moul/txlink"
 )
 
-var debugNowOffset time.Duration
-
 //----------------------------------------
 // Post
 
@@ -62,7 +60,7 @@ func newPost(userPosts *UserPosts, id PostID, creator std.Address, body string, 
 		parentID:   parentID,
 		repostUser: repostUser,
 		reactions:  avl.NewTree(),
-		createdAt:  debugNow(),
+		createdAt:  time.Now(),
 	}
 }
 
@@ -321,15 +319,4 @@ func getPosts(posts avl.Tree, startIndex int, endIndex int) string {
 
 	json += "]}"
 	return json
-}
-
-// Until the problem explained in https://github.com/gnolang/gno/issues/1509
-// is solved, we need post timestamps to be different on reload. This
-// calls Time.Now() and adds an offset which increases by one minute on each call.
-// Therefore, in "normal" operation (before reload) the times are close to the
-// expected value. After reload, all times will be the time of reload, increasing by
-// one minute each, which is not ideal but at least they are different and in order.
-func debugNow() time.Time {
-	debugNowOffset += time.Minute
-	return time.Now().Add(debugNowOffset)
 }

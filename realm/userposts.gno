@@ -84,7 +84,7 @@ func (userPosts *UserPosts) Follow(followedAddr std.Address) PostID {
 	followedUserPosts := getUserPosts(followedAddr)
 	if followedUserPosts != nil {
 		userPosts.following.Set(followedAddr.String(), &FollowingInfo{
-			startedFollowingAt: debugNow(),
+			startedFollowingAt: time.Now(),
 			startedPostsCtr:    PostID(postsCtr), // Ignore past messages.
 		})
 		followedUserPosts.followers.Set(userPosts.userAddr.String(), "")
