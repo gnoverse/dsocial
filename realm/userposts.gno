@@ -209,19 +209,19 @@ func (userPosts *UserPosts) GetURLFromThreadAndReplyID(threadID, replyID PostID)
 }
 
 func (userPosts *UserPosts) GetPostFormURL() string {
-	return txlink.URL("PostMessage")
+	return txlink.Call("PostMessage")
 }
 
 func (userPosts *UserPosts) GetFollowFormURL() string {
-	return txlink.URL("Follow", "followedAddr", userPosts.userAddr.String())
+	return txlink.Call("Follow", "followedAddr", userPosts.userAddr.String())
 }
 
 func (userPosts *UserPosts) GetUnfollowFormURL(followedAddr std.Address) string {
-	return txlink.URL("Unfollow", "followedAddr", followedAddr.String())
+	return txlink.Call("Unfollow", "followedAddr", followedAddr.String())
 }
 
 func (userPosts *UserPosts) GetRefreshFormURL() string {
-	return txlink.URL("RefreshHomePosts", "userPostsAddr", userPosts.userAddr.String())
+	return txlink.Call("RefreshHomePosts", "userPostsAddr", userPosts.userAddr.String())
 }
 
 // Scan userPosts.following for all posts from all followed users starting from lastRefreshId+1 .

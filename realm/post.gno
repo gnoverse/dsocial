@@ -183,7 +183,7 @@ func (post *Post) GetURL() string {
 }
 
 func (post *Post) GetGnodFormURL() string {
-	return txlink.URL("AddReaction",
+	return txlink.Call("AddReaction",
 		"userPostsAddr", post.userPosts.userAddr.String(),
 		"threadid", post.threadID.String(),
 		"postid", post.id.String(),
@@ -191,14 +191,14 @@ func (post *Post) GetGnodFormURL() string {
 }
 
 func (post *Post) GetReplyFormURL() string {
-	return txlink.URL("PostReply",
+	return txlink.Call("PostReply",
 		"userPostsAddr", post.userPosts.userAddr.String(),
 		"threadid", post.threadID.String(),
 		"postid", post.id.String())
 }
 
 func (post *Post) GetRepostFormURL() string {
-	return txlink.URL("RepostThread",
+	return txlink.Call("RepostThread",
 		"userPostsAddr", post.userPosts.userAddr.String(),
 		"threadid", post.threadID.String(),
 		"postid", post.id.String())
