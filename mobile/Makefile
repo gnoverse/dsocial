@@ -20,7 +20,6 @@ ios.release_mode: node_modules ts_check # Run the iOS app in release mode
 .PHONY: ios.release_mode
 
 ios.release_production: node_modules ts_check
-	$(call check-file, GoogleService-Info.plist)
 	eas build --platform ios --profile production
 .PHONY: ios.release_production
 
