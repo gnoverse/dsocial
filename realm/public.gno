@@ -416,7 +416,7 @@ func GetJsonFollowing(address std.Address, startIndex int, endIndex int) string 
 // Get a list of user names starting from the given prefix. Limit the
 // number of results to maxResults.
 func ListUsersByPrefix(prefix string, maxResults int) []string {
-	return avlhelpers.ListByteStringKeysByPrefix(gUserAddressByName, prefix, maxResults)
+	return avlhelpers.ListByteStringKeysByPrefix(&gUserAddressByName, prefix, maxResults)
 }
 
 // Get a list of user names starting from the given prefix. Limit the
