@@ -1,7 +1,8 @@
 # dSocial
+
 Experimental: Social apps and dApps on Gno.land
 
-# Test from command line
+## Test from command line
 
 To install `gnokey` and `gnodev`, in the gno repo enter:
 
