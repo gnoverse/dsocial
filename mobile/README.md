@@ -102,7 +102,7 @@ make ios
 
 ### Build for Android
 
-#### Install the tools with asdf
+#### Install the tools with asdf (only need to do once)
 
 (If not building for iOS, edit the file `.tool-versions` and remove the unneeded lines for `ruby` and `cocoapods`.)
 
