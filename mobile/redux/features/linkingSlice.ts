@@ -73,9 +73,19 @@ export const makeCallTx = async (props: MakeCallTxParams, gnonative: GnoNativeAp
     url.searchParams.append('client_name', 'dSocial');
     url.searchParams.append('reason', reason);
     url.searchParams.append('callback', 'tech.berty.dsocial:/' + callbackPath);
-    url.searchParams.append('session_wanted', "true");
-    // TODO: temporarily passing the session key. This should be removed once the session is used to self sign the tx
-    session && url.searchParams.append('session', session);
+    if (session) {
+        // Avoid edge case when the session is about to expire
+        const sessionInfo = JSON.parse(decodeURIComponent(session))
+        const secondsToExpire = (new Date(sessionInfo.expires_at).getTime() - new Date().getTime()) / 1000;
+        if (secondsToExpire < 30) {
+            url.searchParams.append('session_wanted', 'true');
+        } else {
+            // TODO: temporarily passing the session key. This should be removed once the session is used to self sign the tx
+            url.searchParams.append('session', session);
+        }
+    } else {
+        url.searchParams.append('session_wanted', 'true');
+    }
 
     console.log("redirecting to: ", url);
     Linking.openURL(url.toString());
@@ -122,7 +132,7 @@ export const linkingSlice = createSlice({
 
             state.bech32AddressSelected = queryParams?.address ? queryParams.address as string : undefined
             state.txJsonSigned = queryParams?.tx ? queryParams.tx as string : undefined
-            state.session = queryParams?.session ? queryParams.session as string : undefined
+            state.session = queryParams?.session ? queryParams.session as string : state.session
         },
         clearLinking: (state) => {
             console.log("clearing linking data");
