@@ -1,7 +1,7 @@
 import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
 import { makeCallTx } from "./linkingSlice";
 import { Following } from "@gno/types";
-import { ThunkExtra } from "redux/redux-provider";
+import { RootState, ThunkExtra } from "redux/redux-provider";
 
 const CLIENT_NAME_PARAM = 'client_name=dSocial';
 
@@ -33,8 +33,9 @@ export const followTxAndRedirectToSign = createAsyncThunk<void, { address: strin
   const callerAddressBech32 = await gnonative.addressToBech32(callerAddress);
   const reason = "Follow a user";
   const callbackPath = "/account";
+  const session = (thunkAPI.getState() as RootState).linking.session;
 
-  await makeCallTx({ fnc, args, gasFee, gasWanted, callerAddressBech32, reason, callbackPath }, thunkAPI.extra.gnonative);
+  await makeCallTx({ fnc, args, gasFee, gasWanted, callerAddressBech32, reason, callbackPath, session }, thunkAPI.extra.gnonative);
 });
 
 export const unfollowTxAndRedirectToSign = createAsyncThunk<void, { address: string, callerAddress: Uint8Array }, ThunkExtra>("profile/follow", async ({ address, callerAddress }, thunkAPI) => {
@@ -48,8 +49,9 @@ export const unfollowTxAndRedirectToSign = createAsyncThunk<void, { address: str
   const callerAddressBech32 = await gnonative.addressToBech32(callerAddress);
   const reason = "Unfollow a user";
   const callbackPath = "/account";
+  const session = (thunkAPI.getState() as RootState).linking.session;
 
-  await makeCallTx({ fnc, args, gasFee, gasWanted, callerAddressBech32, reason, callbackPath }, thunkAPI.extra.gnonative);
+  await makeCallTx({ fnc, args, gasFee, gasWanted, callerAddressBech32, reason, callbackPath, session }, thunkAPI.extra.gnonative);
 });
 
 export const setFollows = createAsyncThunk("profile/setFollows", async ({ following, followers }: FollowsProps, _) => {

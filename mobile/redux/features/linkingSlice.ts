@@ -2,16 +2,18 @@ import { Post } from "@gno/types";
 import { GnoNativeApi } from "@gnolang/gnonative";
 import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
 import * as Linking from 'expo-linking';
-import { ThunkExtra } from "redux/redux-provider";
+import { RootState, ThunkExtra } from "redux/redux-provider";
 
 interface State {
     txJsonSigned: string | undefined;
     bech32AddressSelected: string | undefined;
+    session: string | undefined;
 }
 
 const initialState: State = {
     txJsonSigned: undefined,
     bech32AddressSelected: undefined,
+    session: undefined,
 };
 
 export const requestLoginForGnokeyMobile = createAsyncThunk<boolean>("tx/requestLoginForGnokeyMobile", async () => {
@@ -36,8 +38,9 @@ export const postTxAndRedirectToSign = createAsyncThunk<void, MakeTxAndRedirectP
     const gasWanted = BigInt(10000000);
     const reason = "Post a message";
     const callbackPath = "/post";
+    const session = (thunkAPI.getState() as RootState).linking.session;
 
-    await makeCallTx({ fnc, args, gasFee, gasWanted, callerAddressBech32, reason, callbackPath }, thunkAPI.extra.gnonative);
+    await makeCallTx({ fnc, args, gasFee, gasWanted, callerAddressBech32, reason, callbackPath, session }, thunkAPI.extra.gnonative);
 })
 
 type MakeCallTxParams = {
@@ -51,10 +54,11 @@ type MakeCallTxParams = {
     callerAddressBech32: string,
     reason: string,
     callbackPath: string,
+    session?: string,
 };
 
 export const makeCallTx = async (props: MakeCallTxParams, gnonative: GnoNativeApi): Promise<void> => {
-    const { fnc, callerAddressBech32, gasFee, gasWanted, args, packagePath = "gno.land/r/berty/social", reason, callbackPath } = props;
+    const { fnc, callerAddressBech32, gasFee, gasWanted, args, packagePath = "gno.land/r/berty/social", reason, callbackPath, session } = props;
 
     console.log("making a tx for: ", callerAddressBech32);
     const address = await gnonative.addressFromBech32(callerAddressBech32);
@@ -69,6 +73,10 @@ export const makeCallTx = async (props: MakeCallTxParams, gnonative: GnoNativeAp
     url.searchParams.append('client_name', 'dSocial');
     url.searchParams.append('reason', reason);
     url.searchParams.append('callback', 'tech.berty.dsocial:/' + callbackPath);
+    url.searchParams.append('session_wanted', "true");
+    // TODO: temporarily passing the session key. This should be removed once the session is used to self sign the tx
+    session && url.searchParams.append('session', session);
+
     console.log("redirecting to: ", url);
     Linking.openURL(url.toString());
 }
@@ -97,7 +105,9 @@ export const gnodTxAndRedirectToSign = createAsyncThunk<void, GnodCallTxParams, 
     // post.user.address is in fact a bech32 address
     const args: Array<string> = [String(post.user.address), String(post.id), String(post.id), String("0")];
     const reason = "Gnoding a message";
-    await makeCallTx({ fnc, args, gasFee, gasWanted, callerAddressBech32, reason, callbackPath }, thunkAPI.extra.gnonative);
+    const session = (thunkAPI.getState() as RootState).linking.session;
+
+    await makeCallTx({ fnc, args, gasFee, gasWanted, callerAddressBech32, reason, callbackPath, session }, thunkAPI.extra.gnonative);
 });
 
 /**
@@ -112,6 +122,7 @@ export const linkingSlice = createSlice({
 
             state.bech32AddressSelected = queryParams?.address ? queryParams.address as string : undefined
             state.txJsonSigned = queryParams?.tx ? queryParams.tx as string : undefined
+            state.session = queryParams?.session ? queryParams.session as string : undefined
         },
         clearLinking: (state) => {
             console.log("clearing linking data");
