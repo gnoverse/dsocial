@@ -142,9 +142,17 @@ export const linkingSlice = createSlice({
     selectors: {
         selectQueryParamsTxJsonSigned: (state: State) => state.txJsonSigned as string | undefined,
         selectBech32AddressSelected: (state: State) => state.bech32AddressSelected as string | undefined,
+        selectSessionValidUntil: (state: State) => {
+            const session = state.session;
+            if (!session) return undefined;
+            const sessionInfo = JSON.parse(decodeURIComponent(session));
+            return new Date(sessionInfo.expires_at);
+        }
     },
 });
 
 export const { clearLinking, setLinkingData } = linkingSlice.actions;
 
-export const { selectQueryParamsTxJsonSigned, selectBech32AddressSelected } = linkingSlice.selectors;
+export const { selectQueryParamsTxJsonSigned, selectBech32AddressSelected,
+  selectSessionValidUntil
+ } = linkingSlice.selectors;
