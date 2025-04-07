@@ -6,7 +6,7 @@ import TextInput from "@gno/components/textinput";
 import { useNavigation, useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import { KeyboardAvoidingView, Platform } from "react-native";
-import { broadcastTxCommit, clearLinking, postTxAndRedirectToSign, selectAccount, selectQueryParamsTxJsonSigned, selectSessionValidUntil, useAppDispatch, useAppSelector } from "@gno/redux";
+import { broadcastTxCommit, clearLinking, postTxAndRedirectToSign, selectAccount, selectQueryParamsTxJsonSigned, useAppDispatch, useAppSelector } from "@gno/redux";
 import { SessionCountDown } from "@gno/components/counter/session-countdown";
 
 export default function Search() {
@@ -18,7 +18,7 @@ export default function Search() {
   const router = useRouter();
   const dispatch = useAppDispatch();
   const account = useAppSelector(selectAccount);
-  const sessionInMinutes = useAppSelector(selectSessionValidUntil);
+  // const sessionInMinutes = useAppSelector(selectSessionValidUntil);
 
   const txJsonSigned = useAppSelector(selectQueryParamsTxJsonSigned);
 
@@ -66,7 +66,7 @@ export default function Search() {
         <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"}>
           <Text.Title>Let's post a message on the Gno Blockchain!</Text.Title>
           <Spacer />
-          <SessionCountDown time={sessionInMinutes?.getTime()} />
+          <SessionCountDown time={undefined} />
           <Spacer />
           <TextInput
             placeholder="What's happening?"

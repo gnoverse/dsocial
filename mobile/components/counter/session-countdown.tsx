@@ -30,7 +30,7 @@ export function SessionCountDown({ time }: Props) {
 
   if (!time) return <View>
     <Text.Body>
-      No active session
+      {/* No active session */}
     </Text.Body>
   </View>
 

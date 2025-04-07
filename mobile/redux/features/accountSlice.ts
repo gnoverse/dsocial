@@ -62,9 +62,9 @@ export const avatarTxAndRedirectToSign = createAsyncThunk<void, AvatarCallTxPara
   const gasWanted = BigInt(10000000);
   const args: Array<string> = ["Avatar", String(`data:${mimeType};base64,` + base64)];
   const reason = "Upload a new avatar";
-  const session = (thunkAPI.getState() as RootState).linking.session;
+  // const session = (thunkAPI.getState() as RootState).linking.session;
 
-  await makeCallTx({ packagePath: "gno.land/r/demo/profile", fnc: "SetStringField", args, gasFee, gasWanted, callerAddressBech32, reason, callbackPath, session }, gnonative);
+  await makeCallTx({ packagePath: "gno.land/r/demo/profile", fnc: "SetStringField", args, gasFee, gasWanted, callerAddressBech32, reason, callbackPath }, gnonative);
 });
 
 export const reloadAvatar = createAsyncThunk<string | undefined, void, ThunkExtra>("account/reloadAvatar", async (param, thunkAPI) => {

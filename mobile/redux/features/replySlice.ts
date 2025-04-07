@@ -27,9 +27,10 @@ export const repostTxAndRedirectToSign = createAsyncThunk<void, RepostTxAndRedir
   const gasWanted = BigInt(10000000);
   const reason = "Repost a message";
   const callbackPath = "/repost";
-  const session = (thunkAPI.getState() as RootState).linking.session;
+  // const session = (thunkAPI.getState() as RootState).linking.session;
 
-  await makeCallTx({ fnc, args, gasFee, gasWanted, callerAddressBech32, reason, callbackPath, session }, thunkAPI.extra.gnonative);
+  // await makeCallTx({ fnc, args, gasFee, gasWanted, callerAddressBech32, reason, callbackPath, session }, thunkAPI.extra.gnonative);
+  await makeCallTx({ fnc, args, gasFee, gasWanted, callerAddressBech32, reason, callbackPath }, thunkAPI.extra.gnonative);
 })
 
 type ReplytTxAndRedirectParams = {
@@ -47,9 +48,10 @@ export const replyTxAndRedirectToSign = createAsyncThunk<void, ReplytTxAndRedire
   const gasWanted = BigInt(10000000);
   const args: Array<string> = [String(post.user.address), String(post.id), String(post.id), replyContent];
   const reason = "Reply a message";
-  const session = (thunkAPI.getState() as RootState).linking.session;
+  // const session = (thunkAPI.getState() as RootState).linking.session;
 
-  await makeCallTx({ fnc, args, gasFee, gasWanted, callerAddressBech32, reason, callbackPath, session }, thunkAPI.extra.gnonative);
+  // await makeCallTx({ fnc, args, gasFee, gasWanted, callerAddressBech32, reason, callbackPath, session }, thunkAPI.extra.gnonative);
+  await makeCallTx({ fnc, args, gasFee, gasWanted, callerAddressBech32, reason, callbackPath }, thunkAPI.extra.gnonative);
 })
 
 export const replySlice = createSlice({
