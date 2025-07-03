@@ -28,6 +28,9 @@ const IndexerProvider: React.FC<IndexerProviderProps> = ({ children, config }) =
 
   useEffect(() => {
     (async () => {
+      if (clientInstance) {
+        return; // Prevent re-initialization
+      }
       setClientInstance(initClient(config));
     })();
   }, []);

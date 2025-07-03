@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { Provider } from "react-redux";
 import { configureStore } from "@reduxjs/toolkit";
 import { accountSlice, profileSlice, replySlice, linkingSlice } from "./features";
@@ -17,10 +17,10 @@ export interface ThunkExtra {
 }
 
 const reducer = {
-    [accountSlice.reducerPath]: accountSlice.reducer,
-    [profileSlice.reducerPath]: profileSlice.reducer,
-    [replySlice.reducerPath]: replySlice.reducer,
-    [linkingSlice.reducerPath]: linkingSlice.reducer,
+  [accountSlice.reducerPath]: accountSlice.reducer,
+  [profileSlice.reducerPath]: profileSlice.reducer,
+  [replySlice.reducerPath]: replySlice.reducer,
+  [linkingSlice.reducerPath]: linkingSlice.reducer,
 }
 
 export type RootState = typeof reducer
@@ -30,26 +30,35 @@ const ReduxProvider: React.FC<Props> = ({ children }) => {
   const { gnonative } = useGnoNativeContext();
   const search = useSearch();
   const push = useNotificationContext();
-  const userCache= useUserCache();
+  const userCache = useUserCache();
+  const [store, setStore] = useState<any>(null)
 
-  const store = configureStore({
-    reducer,
-    middleware: (getDefaultMiddleware) =>
-      getDefaultMiddleware({
-        serializableCheck: false,
+  useEffect(() => {
+    if (store) return; // Prevent re-initialization
 
-        thunk: {
-          // To make Thunk inject gnonative in all Thunk objects.
-          // https://redux.js.org/tutorials/essentials/part-6-performance-normalization#thunk-arguments
-          extraArgument: {
-            gnonative,
-            search,
-            push,
-            userCache,
+    const storeInstance = configureStore({
+      reducer,
+      middleware: (getDefaultMiddleware) =>
+        getDefaultMiddleware({
+          serializableCheck: false,
+
+          thunk: {
+            // To make Thunk inject gnonative in all Thunk objects.
+            // https://redux.js.org/tutorials/essentials/part-6-performance-normalization#thunk-arguments
+            extraArgument: {
+              gnonative,
+              search,
+              push,
+              userCache,
+            },
           },
-        },
-      }),
-  });
+        }),
+    });
+    setStore(storeInstance)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [store]);
+
+  if (!store) return null
 
   return <Provider store={store}>{children}</Provider>;
 };

@@ -53,6 +53,9 @@ const NotificationProvider: React.FC<NotificationProviderProps> = ({ config, chi
 
   useEffect(() => {
     (async () => {
+      if (clientInstance) {
+        return; // Prevent re-initialization
+      }
       setClientInstance(initClient(config));
     })();
   }, []);
@@ -152,6 +155,10 @@ const NotificationProvider: React.FC<NotificationProviderProps> = ({ config, chi
     getPushToken,
     registerDevice,
   };
+
+  if (!clientInstance) {
+    return null; // Prevent rendering before the client is initialized
+  }
 
   return <NotificationContext.Provider value={value}>{children}</NotificationContext.Provider>;
 };

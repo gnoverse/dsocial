@@ -6,10 +6,12 @@ import { RootState, ThunkExtra } from "redux/redux-provider";
 
 export interface CounterState {
   account?: User;
+  loading: boolean;
 }
 
 const initialState: CounterState = {
   account: undefined,
+  loading: false,
 };
 
 interface LoginParam {
@@ -102,11 +104,17 @@ export const accountSlice = createSlice({
   },
 
   extraReducers(builder) {
+    builder.addCase(loggedIn.pending, (state) => {
+      state.loading = true;
+      console.log("loggedIn.pending");
+    });
     builder.addCase(loggedIn.fulfilled, (state, action) => {
       state.account = action.payload;
+      state.loading = false;
       console.log("Logged in", action.payload);
     });
-    builder.addCase(loggedIn.rejected, (_, action) => {
+    builder.addCase(loggedIn.rejected, (state, action) => {
+      state.loading = false;
       console.error("loggedIn.rejected", action);
     });
     builder.addCase(reloadAvatar.fulfilled, (state, action) => {
@@ -122,9 +130,10 @@ export const accountSlice = createSlice({
   selectors: {
     selectAccount: (state) => state.account,
     selectAvatar: (state) => state.account?.avatar,
+    selectLoginLoading: (state) => state.loading,
   },
 });
 
 export const { logedOut } = accountSlice.actions;
 
-export const { selectAccount, selectAvatar } = accountSlice.selectors;
+export const { selectAccount, selectAvatar, selectLoginLoading } = accountSlice.selectors;
