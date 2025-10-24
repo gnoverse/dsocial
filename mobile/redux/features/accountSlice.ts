@@ -14,21 +14,24 @@ const initialState: CounterState = {
   loading: false,
 };
 
-interface LoginParam {
-  bech32: string;
-}
-
-export const loggedIn = createAsyncThunk<User, LoginParam, ThunkExtra>("account/loggedIn", async (param, thunkAPI) => {
+export const loggedIn = createAsyncThunk<User, void, ThunkExtra>("account/loggedIn", async (param, thunkAPI) => {
   console.log("Logging in", param);
-  const { bech32 } = param;
 
+  const { bech32AddressSelected: bech32, chainId, remoteURL } = (thunkAPI.getState() as RootState).linking;
+
+  if (!bech32 || !chainId || !remoteURL) {
+    throw new Error("No bech32 address, chainId or remoteURL found for login");
+  }
   const gnonative = thunkAPI.extra.gnonative as GnoNativeApi;
 
+  await gnonative.setChainID(chainId);
+  await gnonative.setRemote(remoteURL);
+
   const user: User = {
-    name: await getAccountName(bech32, gnonative) || 'Unknown',
+    name: (await getAccountName(bech32, gnonative)) || "Unknown",
     address: await gnonative.addressFromBech32(bech32),
     bech32,
-    avatar: await loadBech32AvatarFromChain(bech32, thunkAPI)
+    avatar: await loadBech32AvatarFromChain(bech32, thunkAPI),
   };
 
   return user;
@@ -41,9 +44,9 @@ async function getAccountName(bech32: string, gnonative: GnoNativeApi) {
     console.log("GetUserByAddress result:", accountNameStr);
     const accountName = accountNameStr.match(/\("(\w+)"/)?.[1];
     console.log("GetUserByAddress after regex", accountName);
-    return accountName
+    return accountName;
   } catch (error) {
-      console.error("Error getting account name", error);
+    console.error("Error getting account name", error);
   }
   return undefined;
 }
@@ -55,44 +58,64 @@ interface AvatarCallTxParams {
   callbackPath: string;
 }
 
-export const avatarTxAndRedirectToSign = createAsyncThunk<void, AvatarCallTxParams, ThunkExtra>("account/avatarTxAndRedirectToSign", async (props, thunkAPI) => {
-  const { mimeType, base64, callerAddressBech32, callbackPath } = props;
+export const avatarTxAndRedirectToSign = createAsyncThunk<void, AvatarCallTxParams, ThunkExtra>(
+  "account/avatarTxAndRedirectToSign",
+  async (props, thunkAPI) => {
+    const { mimeType, base64, callerAddressBech32, callbackPath } = props;
 
-  const gnonative = thunkAPI.extra.gnonative;
+    const gnonative = thunkAPI.extra.gnonative;
 
-  const gasFee = "1000000ugnot";
-  const gasWanted = BigInt(10000000);
-  const args: Array<string> = ["Avatar", String(`data:${mimeType};base64,` + base64)];
-  const reason = "Upload a new avatar";
-  // const session = (thunkAPI.getState() as RootState).linking.session;
+    const gasFee = "1000000ugnot";
+    const gasWanted = BigInt(10000000);
+    const args: Array<string> = ["Avatar", String(`data:${mimeType};base64,` + base64)];
+    const reason = "Upload a new avatar";
+    // const session = (thunkAPI.getState() as RootState).linking.session;
 
-  await makeCallTx({ packagePath: "gno.land/r/demo/profile", fnc: "SetStringField", args, gasFee, gasWanted, callerAddressBech32, reason, callbackPath }, gnonative);
-});
-
-export const reloadAvatar = createAsyncThunk<string | undefined, void, ThunkExtra>("account/reloadAvatar", async (param, thunkAPI) => {
-
-  const state = await thunkAPI.getState() as CounterState;
-  // @ts-ignore
-  const bech32 = state.account?.account?.bech32;
-  if (bech32) {
-    return await loadBech32AvatarFromChain(bech32, thunkAPI);
+    await makeCallTx(
+      {
+        packagePath: "gno.land/r/demo/profile",
+        fnc: "SetStringField",
+        args,
+        gasFee,
+        gasWanted,
+        callerAddressBech32,
+        reason,
+        callbackPath,
+      },
+      gnonative
+    );
   }
-  return undefined;
-});
+);
+
+export const reloadAvatar = createAsyncThunk<string | undefined, void, ThunkExtra>(
+  "account/reloadAvatar",
+  async (param, thunkAPI) => {
+    const state = (await thunkAPI.getState()) as CounterState;
+    // @ts-ignore
+    const bech32 = state.account?.account?.bech32;
+    if (bech32) {
+      return await loadBech32AvatarFromChain(bech32, thunkAPI);
+    }
+    return undefined;
+  }
+);
 
 const loadBech32AvatarFromChain = async (bech32: string, thunkAPI: ThunkExtra) => {
   const gnonative = thunkAPI.extra.gnonative as GnoNativeApi;
-  const DEFAULT_AVATAR = "https://www.gravatar.com/avatar/tmp"
+  const DEFAULT_AVATAR = "https://www.gravatar.com/avatar/tmp";
 
   try {
     console.log("Loading avatar for", bech32);
-    const response = await gnonative.qEval("gno.land/r/demo/profile", `GetStringField("${bech32}","Avatar", "${DEFAULT_AVATAR}")`);
-    return response.substring(2, response.length - "\" string)".length);
+    const response = await gnonative.qEval(
+      "gno.land/r/demo/profile",
+      `GetStringField("${bech32}","Avatar", "${DEFAULT_AVATAR}")`
+    );
+    return response.substring(2, response.length - '" string)'.length);
   } catch (error) {
     console.error("Error loading avatar", error);
   }
   return DEFAULT_AVATAR;
-}
+};
 
 export const accountSlice = createSlice({
   name: "account",

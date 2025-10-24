@@ -22,7 +22,7 @@ export default function Root() {
     if (loading) return
     console.log("bech32AddressSelected on index", bech32AddressSelected);
     if (bech32AddressSelected) {
-      dispatch(loggedIn({ bech32: bech32AddressSelected as string }));
+      dispatch(loggedIn());
     }
   }, [bech32AddressSelected]);
 
