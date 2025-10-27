@@ -10,14 +10,9 @@ import { LinkingProvider } from "@gno/provider/linking-provider";
 
 const gnoDefaultConfig = {
   // @ts-ignore
-  remote: process.env.EXPO_PUBLIC_GNO_REMOTE!,
+  remote: '', // It will be set dynamically from linking state
   // @ts-ignore
-  chain_id: process.env.EXPO_PUBLIC_GNO_CHAIN_ID!,
-};
-
-const indexerDefaultConfig = {
-  // @ts-ignore
-  remote: process.env.EXPO_PUBLIC_INDEXER_REMOTE!,
+  chain_id: '', // It will be set dynamically from linking state
 };
 
 const notificationDefaultConfig = {
@@ -29,7 +24,7 @@ export default function AppLayout() {
   return (
     <GnoNativeProvider config={gnoDefaultConfig}>
       <NotificationProvider config={notificationDefaultConfig}>
-        <IndexerProvider config={indexerDefaultConfig}>
+        <IndexerProvider>
           <ReduxProvider>
             <LinkingProvider>
               <ThemeProvider value={DefaultTheme}>

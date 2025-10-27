@@ -1,8 +1,7 @@
-import { createContext, useContext, useEffect, useState } from "react";
-
+import { createContext, useContext, useState } from "react";
 import * as Grpc from "@gno/grpc/client";
-import { Client } from "@connectrpc/connect";
 
+import { Client } from "@connectrpc/connect";
 import { HelloResponse, HelloStreamResponse, UserAndPostID } from "@buf/gnolang_dsocial-indexer.bufbuild_es/indexerservice_pb";
 import { IndexerService } from "@buf/gnolang_dsocial-indexer.bufbuild_es/indexerservice_pb";
 
@@ -10,37 +9,25 @@ export interface IndexerContextProps {
   getHomePosts: (userPostAddr: string, startIndex: bigint, endIndex: bigint) => Promise<[number, string]>;
   hello: (name: string) => Promise<HelloResponse>;
   helloStream: (name: string) => Promise<AsyncIterable<HelloStreamResponse>>;
-}
-
-interface ConfigProps {
-  remote: string;
+  initIndexer: (indexerUrl: string) => void;
+  indexerInstance?: Client<typeof IndexerService>;
 }
 
 interface IndexerProviderProps {
-  config: ConfigProps;
   children: React.ReactNode;
 }
 
 const IndexerContext = createContext<IndexerContextProps | null>(null);
 
-const IndexerProvider: React.FC<IndexerProviderProps> = ({ children, config }) => {
+const IndexerProvider: React.FC<IndexerProviderProps> = ({ children }) => {
   const [clientInstance, setClientInstance] = useState<Client<typeof IndexerService> | undefined>(undefined);
 
-  useEffect(() => {
-    (async () => {
-      if (clientInstance) {
-        return; // Prevent re-initialization
-      }
-      setClientInstance(initClient(config));
-    })();
-  }, []);
-
-  const initClient = (config: ConfigProps): Client<typeof IndexerService> => {
-    if (clientInstance) {
-      return clientInstance;
+  const initIndexer = (indexerUrl: string) => {
+    if (!indexerUrl) {
+      throw new Error("indexerUrl is required to initialize indexer client.");
     }
-
-    return Grpc.createIndexerClient(config.remote);
+    setClientInstance(Grpc.createIndexerClient(indexerUrl));
+    console.log("Indexer client initialized with URL:", indexerUrl);
   };
 
   const getClient = () => {
@@ -87,14 +74,12 @@ const IndexerProvider: React.FC<IndexerProviderProps> = ({ children, config }) =
     return client.helloStream({ name });
   };
 
-  if (!clientInstance) {
-    return null;
-  }
-
   const value = {
     getHomePosts,
     hello,
     helloStream,
+    initIndexer,
+    indexerInstance: clientInstance,
   };
 
   return <IndexerContext.Provider value={value}>{children}</IndexerContext.Provider>;
