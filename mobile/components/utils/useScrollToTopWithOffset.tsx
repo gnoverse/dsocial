@@ -1,4 +1,4 @@
-import { EventArg, NavigationProp, useNavigation, useRoute } from "@react-navigation/core";
+import { EventArg, NavigationProp, useNavigation, useRoute } from "expo-router/react-navigation";
 import * as React from "react";
 import type { ScrollView } from "react-native";
 
@@ -12,7 +12,7 @@ type ScrollableView =
 
 type ScrollableWrapper = { getScrollResponder(): React.ReactNode | ScrollView } | { getNode(): ScrollableView } | ScrollableView;
 
-function getScrollableNode(ref: React.RefObject<ScrollableWrapper>) {
+function getScrollableNode(ref: React.RefObject<ScrollableWrapper | null>) {
   if (ref.current == null) {
     return null;
   }
@@ -40,7 +40,7 @@ function getScrollableNode(ref: React.RefObject<ScrollableWrapper>) {
   }
 }
 
-export default function useScrollToTop(ref: React.RefObject<ScrollableWrapper>, offset: number = 0) {
+export default function useScrollToTop(ref: React.RefObject<ScrollableWrapper | null>, offset: number = 0) {
   const navigation = useNavigation();
   const route = useRoute();
 
