@@ -41,7 +41,10 @@ import { MethodOptions_IdempotencyLevel } from "@bufbuild/protobuf/wkt";
 
 // Polyfill async.Iterator. For some reason, the Babel presets and plugins are not doing the trick.
 // Code from here: https://www.typescriptlang.org/docs/handbook/release-notes/typescript-2-3.html#caveats
-(Symbol as any).asyncIterator = Symbol.asyncIterator || Symbol.for("Symbol.asyncIterator");
+// Symbol.asyncIterator is read-only on Hermes V1 (the default since Expo SDK 56), so only define it when missing.
+if (!Symbol.asyncIterator) {
+  Object.defineProperty(Symbol, "asyncIterator", { value: Symbol.for("Symbol.asyncIterator") });
+}
 
 export interface ConnectTransportOptions {
   /**

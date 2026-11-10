@@ -4,16 +4,11 @@
     "slug": "dsocial",
     "platforms": ["ios", "android"],
     "version": "1.0.0",
-    "sdkVersion": "52.0.0",
+    "sdkVersion": "58.0.0",
     "orientation": "portrait",
     "scheme": "tech.berty.dsocial",
     "icon": "./assets/images/icon.png",
     "userInterfaceStyle": "automatic",
-    "splash": {
-      "image": "./assets/images/splash.png",
-      "resizeMode": "contain",
-      "backgroundColor": "#ffffff"
-    },
     "assetBundlePatterns": ["**/*"],
     "ios": {
       "supportsTablet": true,
@@ -40,7 +35,7 @@
         "backgroundColor": "#ffffff"
       },
       "package": "tech.berty.dsocial.android",
-      "versionCode": "12"
+      "versionCode": 12
     },
     "web": {
       "favicon": "./assets/images/favicon.png"
@@ -49,6 +44,13 @@
       "tsconfigPaths": true
     },
     "plugins": ["expo-router", [
+      "expo-splash-screen",
+      {
+        "image": "./assets/images/splash.png",
+        "resizeMode": "contain",
+        "backgroundColor": "#ffffff"
+      }
+    ], [
       "expo-image-picker",
       {
         "photosPermission": "The app accesses your photos to upload an avatar.",

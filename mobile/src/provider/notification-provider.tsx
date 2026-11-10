@@ -29,8 +29,8 @@ const NotificationProvider: React.FC<NotificationProviderProps> = ({ config, chi
   const [clientInstance, setClientInstance] = useState<Client<typeof NotificationService> | undefined>(undefined);
   const [expoPushToken, setExpoPushToken] = useState("");
   const [notification, setNotification] = useState<Notifications.Notification | undefined>(undefined);
-  const notificationListener = useRef<Notifications.EventSubscription>();
-  const responseListener = useRef<Notifications.EventSubscription>();
+  const notificationListener = useRef<Notifications.EventSubscription>(undefined);
+  const responseListener = useRef<Notifications.EventSubscription>(undefined);
 
   useEffect(() => {
     registerForPushNotificationsAsync()
@@ -92,7 +92,8 @@ const NotificationProvider: React.FC<NotificationProviderProps> = ({ config, chi
 
   Notifications.setNotificationHandler({
     handleNotification: async () => ({
-      shouldShowAlert: true,
+      shouldShowBanner: true,
+      shouldShowList: true,
       shouldPlaySound: false,
       shouldSetBadge: false,
     }),

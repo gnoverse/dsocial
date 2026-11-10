@@ -32,7 +32,9 @@ const ToggleIcon = styled.TouchableOpacity`
   padding: 2px;
 `;
 
-export const TextInput = React.forwardRef<RNTextInput, Props>((props, ref) => {
+export type TextInputRef = React.ComponentRef<typeof RNTextInput>;
+
+export const TextInput = ({ ref, ...props }: Props & { ref?: React.Ref<TextInputRef> }) => {
   const [isSecureText, setShowSecureText] = React.useState(props.secureTextEntry);
 
   return (
@@ -46,6 +48,6 @@ export const TextInput = React.forwardRef<RNTextInput, Props>((props, ref) => {
       ) : null}
     </Container>
   );
-});
+};
 
 export default TextInput;

@@ -6,13 +6,11 @@ import {
   TouchableWithoutFeedback,
   Keyboard,
   Modal,
-  TextInput as RNTextInput,
 } from "react-native";
-import { GRPCError } from "@gnolang/gnonative/src/grpc/error";
 import Alert from "@gno/components/alert";
-import { useGnoNativeContext, ErrCode } from "@gnolang/gnonative";
+import { useGnoNativeContext, ErrCode, GRPCError, errDetailOf } from "@gnolang/gnonative";
 import { ModalView } from ".";
-import TextInput from "../textinput";
+import TextInput, { TextInputRef } from "../textinput";
 import Text from "../text";
 import Button from "../button";
 import Spacer from "../spacer";
@@ -29,7 +27,7 @@ const ReenterPassword = ({ visible, accountName, onClose, accountAddress }: Prop
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | undefined>(undefined);
 
-  const inputRef = useRef<RNTextInput>(null);
+  const inputRef = useRef<TextInputRef>(null);
 
   useEffect(() => {
     if (visible) {
@@ -47,8 +45,8 @@ const ReenterPassword = ({ visible, accountName, onClose, accountAddress }: Prop
       await gnonative.setPassword(password, accountAddress);
       onClose(true);
     } catch (error: any) {
-      const err = new GRPCError(error);
-      if (err.errCode() === ErrCode.ErrDecryptionFailed) {
+      const errCode = errDetailOf(error)?.code ?? new GRPCError(error).errCode();
+      if (errCode === ErrCode.ErrDecryptionFailed) {
         setError("Wrong password, please try again.");
       } else {
         setError(JSON.stringify(error));

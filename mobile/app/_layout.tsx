@@ -1,6 +1,5 @@
-import { Stack } from "expo-router";
+import { DefaultTheme, Stack, ThemeProvider } from "expo-router";
 
-import { DefaultTheme, ThemeProvider } from "@react-navigation/native";
 import { Guard } from "@gno/components/auth/guard";
 import { GnoNativeProvider } from "@gnolang/gnonative";
 import { IndexerProvider } from "@gno/provider/indexer-provider";
