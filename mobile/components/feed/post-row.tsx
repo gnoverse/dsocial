@@ -36,6 +36,12 @@ export function PostRow({ post, onPress = func, onGnod = func, showFooter = true
     router.navigate({ pathname: "account" });
   };
 
+  // Push (not navigate) so that tapping a hashtag on the hashtag screen opens a new screen.
+  // The realm makes the hashtag lowercase.
+  const navigateToHashtag = (hashtag: string) => {
+    router.push({ pathname: "/hashtag/[hashtag]", params: { hashtag } });
+  };
+
   if (!post) {
     return null;
   }
@@ -53,7 +59,9 @@ export function PostRow({ post, onPress = func, onGnod = func, showFooter = true
             </Pressable>
           </View>
 
-          <PostContentLabel onMentionPress={(value) => nativgateToAccount(value)}>{post.post}</PostContentLabel>
+          <PostContentLabel onMentionPress={(value) => nativgateToAccount(value)} onHashtagPress={navigateToHashtag}>
+            {post.post}
+          </PostContentLabel>
           {isRepost ? <RepostRow post={post.repost_parent} onPress={onPress} showFooter={false} /> : null}
         </View>
       </View>

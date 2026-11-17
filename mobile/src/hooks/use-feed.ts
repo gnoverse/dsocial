@@ -24,6 +24,13 @@ export const useFeed = () => {
     return json;
   }
 
+  // Get the posts with the hashtag (without the '#'). Set startIndex and endIndex to 0 to just get n_posts.
+  async function fetchHashtagPosts(hashtag: string, startIndex: number, endIndex: number): Promise<ThreadPosts> {
+    // JSON.stringify quotes the hashtag as a string literal which is also valid in Gno.
+    const result = await gnonative.qEval("gno.land/r/berty/social", `GetHashtagPosts(${JSON.stringify(hashtag)}, ${startIndex}, ${endIndex})`);
+    return await enrichData(result);
+  }
+
   async function fetchThread(address: string, postId: number): Promise<ThreadPosts> {
 
     const result = await gnonative.qEval("gno.land/r/berty/social", `GetThreadPosts("${address}",${postId},0, 0, 100)`);
@@ -107,5 +114,5 @@ export const useFeed = () => {
     return nHomePosts;
   }
 
-  return { fetchFeed, fetchCount, fetchThread, fetchThreadPosts };
+  return { fetchFeed, fetchCount, fetchThread, fetchThreadPosts, fetchHashtagPosts };
 };

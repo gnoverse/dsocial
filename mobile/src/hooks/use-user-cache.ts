@@ -21,16 +21,22 @@ export const useUserCache = () => {
 
     const quoted = result.substring(1, result.length - " string)".length);
     const jsonString = JSON.parse(quoted);
-    const userJson = JSON.parse(jsonString);
+    let username = bech32;
+    if (jsonString != "") {
+      const userJson = JSON.parse(jsonString);
+      username = userJson.name;
+    }
 
     const response = await gnonative.qEval("gno.land/r/demo/profile", `GetStringField("${bech32}","Avatar", "${DEFAULT_AVATAR}")`);
     const bech32Image = response.substring(2, response.length - "\" string)".length);
 
     const user = {
-      name: userJson.name,
+      name: username,
       password: "",
       pubKey: "",
-      address: userJson.address,
+      // The app uses a cached user's address as the bech32 string (see String(post.user.address)
+      // in linkingSlice), not the Uint8Array of the User type.
+      address: bech32 as any,
       avatar: bech32Image,
       bech32: "",
     };

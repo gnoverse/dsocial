@@ -12,13 +12,16 @@ type Props = {
   totalPosts: number;
   onPress: (item: Post) => void;
   onGnod: (item: Post) => void;
-  bech32: string;
-  type: "userPosts" | "userFeed";
+  // The user's address, for type "userPosts" or "userFeed".
+  bech32?: string;
+  // The hashtag (without the '#'), for type "hashtagPosts".
+  hashtag?: string;
+  type: "userPosts" | "userFeed" | "hashtagPosts";
 };
 
 const subtractOrZero = (a: number, b: number) => Math.max(0, a - b);
 
-export default function FeedView({ totalPosts, onPress, onGnod, bech32, type }: Props) {
+export default function FeedView({ totalPosts, onPress, onGnod, bech32 = "", hashtag = "", type }: Props) {
   const pageSize = 9;
   const [startIndex, setStartIndex] = useState(subtractOrZero(totalPosts, pageSize));
   const [endIndex, setEndIndex] = useState(totalPosts);
@@ -55,10 +58,14 @@ export default function FeedView({ totalPosts, onPress, onGnod, bech32, type }: 
     setIsLoading(true);
     try {
       console.log("fetching data from %d to %d", startIndex, endIndex);
-      const result =
-        type === "userPosts"
-          ? await feed.fetchThreadPosts(bech32, startIndex, endIndex)
-          : await feed.fetchFeed(bech32, startIndex, endIndex);
+      let result;
+      if (type === "hashtagPosts") {
+        result = await feed.fetchHashtagPosts(hashtag, startIndex, endIndex);
+      } else if (type === "userPosts") {
+        result = await feed.fetchThreadPosts(bech32, startIndex, endIndex);
+      } else {
+        result = await feed.fetchFeed(bech32, startIndex, endIndex);
+      }
       setLimit(result.n_posts);
       setStartIndex(subtractOrZero(startIndex, pageSize));
       setEndIndex(startIndex);
