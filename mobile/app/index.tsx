@@ -11,6 +11,8 @@ import {
   selectBech32AddressSelected,
   selectLoginLoading,
   selectRemoteURL,
+  setLinkingData,
+  setProfileAccountName,
   useAppDispatch,
   useAppSelector,
 } from "@gno/redux";
@@ -35,14 +37,7 @@ export default function Root() {
   useEffect(() => {
     if (loading || !bech32AddressSelected || !remoteURL) return;
     console.log("bech32AddressSelected on index", bech32AddressSelected);
-
-    if (remoteURL !== "https://api.gno.berty.io:443") {
-      Alert.alert(
-        "Unsupported Remote URL",
-        "This build supports only https://api.gno.berty.io:443. Please update your remote URL and try again."
-      );
-      return;
-    }
+    // TODO: The remote indexer should come from the local network config.
     initIndexer("https://indexer.gno.berty.io");
     dispatch(loggedIn());
   }, [bech32AddressSelected]);
@@ -51,12 +46,30 @@ export default function Root() {
     if (loading) return
     if (account) {
       dispatch(clearLinking());
-      route.replace("/home");
+      // TEMP for testing: open the signed-in user's account page instead of the home feed.
+      // route.replace("/home");
+      dispatch(setProfileAccountName(account.name));
+      route.replace("/account");
     }
   }, [account]);
 
   const signinUsingGnokey = async () => {
     await dispatch(requestLoginForGnokeyMobile()).unwrap();
+  };
+
+  const browseAsGuest = () => {
+    // TODO: Properly use the local network config and set up the account as not signed in.
+    // For now, bypass the round trip to Gnokey Mobile by simulating its sign-in callback.
+    // TODO: After the sign-in flow is updated, make sure tapping this again in the same session (e.g. after
+    // signing out) signs in again. Currently it doesn't, because clearLinking doesn't reset bech32AddressSelected
+    // (it reassigns `state` instead of returning initialState), so the sign-in effect doesn't re-run.
+    dispatch(setLinkingData({
+      queryParams: {
+        address: "g1jg8mtutu9khhfwc4nxmuhcpftf0pajdhfvsqf5",
+        chain_id: "dev",
+        remote: "tcp://127.0.0.1:26657",
+      },
+    }));
   };
 
   return (
@@ -77,6 +90,12 @@ export default function Root() {
           <Spacer />
           <Text.Caption1>Sign in using Gnokey Mobile:</Text.Caption1>
           <Button.TouchableOpacity title="Sign in" onPress={signinUsingGnokey} variant="primary" loading={loading} />
+          <View style={{ flexDirection: "row", alignItems: "center", marginVertical: 16 }}>
+            <View style={{ flex: 1, height: 2, backgroundColor: "#e7e7e7" }} />
+            <Text.Body style={{ marginHorizontal: 12, color: "#667386" }}>or</Text.Body>
+            <View style={{ flex: 1, height: 2, backgroundColor: "#e7e7e7" }} />
+          </View>
+          <Button.TouchableOpacity title="Browse as Guest" onPress={browseAsGuest} variant="primary-green" />
         </Layout.BodyAlignedBotton>
       </Layout.Container>
     </>
