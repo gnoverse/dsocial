@@ -302,6 +302,10 @@ func (post *Post) RenderInner() string {
 }
 
 // MarshalJSON implements the json.Marshaler interface.
+// "user_posts_addr" and "thread_id" are the arguments to use with GetThreadPosts, PostReply,
+// AddReaction, etc. For a reply, these are the owner of the thread and the ID of its top-level
+// thread, not the reply's "creator" and "id". For a thread or a repost, "thread_id" is the same
+// as "id".
 func (post *Post) MarshalJSON() ([]byte, error) {
 	createdAt, err := post.createdAt.MarshalJSON()
 	if err != nil {
@@ -310,9 +314,9 @@ func (post *Post) MarshalJSON() ([]byte, error) {
 
 	json := new(bytes.Buffer)
 
-	json.WriteString(ufmt.Sprintf(`{"id": %d, "createdAt": %s, "creator": "%s", "n_gnods": %d, "n_replies": %d, "n_replies_all": %d, "parent_id": %d`,
-		uint64(post.id), string(createdAt), post.creator.String(), post.GetReactionCount(Gnod), post.replies.Size(), post.repliesAll.Size(),
-		uint64(post.parentID)))
+	json.WriteString(ufmt.Sprintf(`{"id": %d, "createdAt": %s, "creator": "%s", "user_posts_addr": "%s", "thread_id": %d, "n_gnods": %d, "n_replies": %d, "n_replies_all": %d, "parent_id": %d`,
+		uint64(post.id), string(createdAt), post.creator.String(), post.userPosts.userAddr.String(), uint64(post.threadID),
+		post.GetReactionCount(Gnod), post.replies.Size(), post.repliesAll.Size(), uint64(post.parentID)))
 	if post.repostUser != "" {
 		json.WriteString(ufmt.Sprintf(`, "repost_user": %s`, strconv.Quote(post.repostUser.String())))
 	}

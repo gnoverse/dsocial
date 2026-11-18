@@ -162,7 +162,9 @@ func GetThreadPosts(userPostsAddr address, threadID int, replyID int, startIndex
 // The posts are oldest first. Limit the response to posts from startIndex up to (not including)
 // endIndex. If you just want the total count, set startIndex and endIndex to 0 and see the
 // response "n_threads". If there are no posts with the hashtag, then "n_threads" is 0.
-// The response is a JSON string in the same format as GetThreadPosts.
+// The response is a JSON string in the same format as GetThreadPosts. A post may be a reply, so
+// to open it or act on it, use its "user_posts_addr" and "thread_id" (see Post.MarshalJSON).
+// Only a top-level thread (where "parent_id" is 0) can be reposted.
 func GetHashtagPosts(hashtag string, startIndex int, endIndex int) string {
 	postsI := gPostsByHashtag.Get(strings.ToLower(hashtag))
 	if postsI == nil {

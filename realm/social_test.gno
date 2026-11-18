@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"gno.land/p/nt/bptree/v0"
+	"gno.land/p/nt/ufmt/v0"
 )
 
 func TestPostLookups(t *testing.T) {
@@ -162,6 +163,32 @@ func TestPostsByHashtag(t *testing.T) {
 	checkPosts("other", []*Post{thread})
 	if gPostsByHashtag.Get("Topic") != nil || gPostsByHashtag.Get("missing") != nil {
 		t.Fatal("unexpected posts for a hashtag")
+	}
+}
+
+// A reply in GetHashtagPosts must have the user_posts_addr and thread_id to open it with
+// GetThreadPosts, even when the reply's creator has never posted a thread.
+func TestHashtagReplyJSON(t *testing.T) {
+	alice := address("g1hashtagalice")
+	bob := address("g1hashtagbob")
+	thread := getOrCreateUserPosts(alice, "hashtagalice").addThread("Thread #ReplyJSON")
+	reply := thread.addReply(bob, "Reply #ReplyJSON")
+	reply.addReply(alice, "Sub reply")
+
+	out := GetHashtagPosts("replyjson", 0, 10)
+	for _, want := range []string{
+		ufmt.Sprintf(`"creator": "%s", "user_posts_addr": "%s", "thread_id": %d,`, alice, alice, uint64(thread.id)),
+		ufmt.Sprintf(`"creator": "%s", "user_posts_addr": "%s", "thread_id": %d,`, bob, alice, uint64(thread.id)),
+	} {
+		if !strings.Contains(out, want) {
+			t.Fatalf("GetHashtagPosts does not contain %q:\n%s", want, out)
+		}
+	}
+
+	// Open the reply the way the mobile app does, which shows the reply's sub replies.
+	out = GetThreadPosts(alice, int(thread.id), int(reply.id), 0, 10)
+	if !strings.Contains(out, `"n_threads": 1,`) || !strings.Contains(out, "Sub reply") {
+		t.Fatalf("GetThreadPosts for the reply does not have the sub reply:\n%s", out)
 	}
 }
 
