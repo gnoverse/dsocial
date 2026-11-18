@@ -237,7 +237,7 @@ func addPostToHashtags(post *Post) {
 func displayAddressMD(addr address) string {
 	user := users.ResolveAddress(addr)
 	if user == nil {
-		return "[" + addr.String() + "](/r/gnoland/users/v1:" + addr.String() + ")"
+		return "[" + addr.String() + "](/u/" + addr.String() + ")"
 	} else {
 		return "[@" + user.Name() + "](" + gRealmPath + ":" + user.Name() + ")"
 	}
