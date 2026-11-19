@@ -14,7 +14,7 @@ import (
 //----------------------------------------
 // Post
 
-// NOTE: a PostID is relative to the userPosts.
+// NOTE: a PostID is global.
 type PostID uint64
 
 func (pid PostID) String() string {
@@ -37,6 +37,7 @@ type Post struct {
 	id         PostID
 	creator    address
 	body       string
+	hashtags   []string
 	replies    bptree.BPTree  // PostID -> *Post
 	repliesAll bptree.BPTree  // PostID -> *Post (all replies, for top-level posts)
 	reposts    bptree.BPTree  // UserPosts user address -> PostID
@@ -53,6 +54,7 @@ func newPost(userPosts *UserPosts, id PostID, creator address, body string, thre
 		id:         id,
 		creator:    creator,
 		body:       body,
+		hashtags:   parseHashtags(body),
 		replies:    bptree.BPTree{},
 		repliesAll: bptree.BPTree{},
 		reposts:    bptree.BPTree{},
@@ -84,6 +86,7 @@ func (post *Post) addReply(creator address, body string) *Post {
 		thread := userPosts.GetThread(post.threadID)
 		thread.repliesAll.Set(pidkey, reply)
 	}
+	addPostToHashtags(reply)
 	return reply
 }
 
@@ -99,6 +102,7 @@ func (post *Post) addRepostTo(creator address, comment string, dst *UserPosts) *
 	// Also add to the home posts.
 	dst.homePosts.Set(pidkey, repost)
 	post.reposts.Set(creator.String(), pid)
+	addPostToHashtags(repost)
 	return repost
 }
 
@@ -166,8 +170,21 @@ func validateReaction(reaction Reaction) {
 	}
 }
 
+// The maximum length in bytes of a post summary, including a trailing "...".
+const summaryLength = 80
+
 func (post *Post) GetSummary() string {
-	return summaryOf(post.body, 80)
+	return summaryOf(post.body, summaryLength)
+}
+
+// Return the summary (see GetSummary) as escaped markdown, with each hashtag linked to its page.
+func (post *Post) summaryMD() string {
+	n, more := summaryLen(post.body, summaryLength)
+	str := linkHashtags(post.body, n, sanitize.InlineText)
+	if more {
+		str += sanitize.InlineText("...")
+	}
+	return str
 }
 
 func (post *Post) GetURL() string {
@@ -213,10 +230,10 @@ func (post *Post) RenderSummary() string {
 		if thread == nil {
 			return "reposted post does not exist"
 		}
-		return "Repost: " + sanitize.InlineText(post.GetSummary()) + "\n\n" + thread.RenderSummary()
+		return "Repost: " + post.summaryMD() + "\n\n" + thread.RenderSummary()
 	}
 	str := ""
-	str += sanitize.InlineText(post.GetSummary()) + "\n"
+	str += post.summaryMD() + "\n"
 	str += "\\- " + displayAddressMD(post.creator) + ","
 	str += " [" + post.createdAt.Format("2006-01-02 3:04pm MST") + "](" + post.GetURL() + ")"
 	str += " (" + strconv.Itoa(post.GetReactionCount(Gnod)) + " gnods)"
@@ -230,7 +247,7 @@ func (post *Post) RenderPost(indent string, levels int) string {
 		return "nil post"
 	}
 	str := ""
-	str += indentBody(indent, sanitize.Block(post.body)) + "\n" // TODO: indent body lines.
+	str += indentBody(indent, sanitize.Block(linkHashtags(post.body, len(post.body), nil))) + "\n" // TODO: indent body lines.
 	str += indent + "\\- " + displayAddressMD(post.creator) + ", "
 	str += "[" + post.createdAt.Format("2006-01-02 3:04pm (MST)") + "](" + post.GetURL() + ")"
 	str += " - (" + strconv.Itoa(post.GetReactionCount(Gnod)) + " gnods) - "
@@ -285,6 +302,10 @@ func (post *Post) RenderInner() string {
 }
 
 // MarshalJSON implements the json.Marshaler interface.
+// "user_posts_addr" and "thread_id" are the arguments to use with GetThreadPosts, PostReply,
+// AddReaction, etc. For a reply, these are the owner of the thread and the ID of its top-level
+// thread, not the reply's "creator" and "id". For a thread or a repost, "thread_id" is the same
+// as "id".
 func (post *Post) MarshalJSON() ([]byte, error) {
 	createdAt, err := post.createdAt.MarshalJSON()
 	if err != nil {
@@ -293,9 +314,9 @@ func (post *Post) MarshalJSON() ([]byte, error) {
 
 	json := new(bytes.Buffer)
 
-	json.WriteString(ufmt.Sprintf(`{"id": %d, "createdAt": %s, "creator": "%s", "n_gnods": %d, "n_replies": %d, "n_replies_all": %d, "parent_id": %d`,
-		uint64(post.id), string(createdAt), post.creator.String(), post.GetReactionCount(Gnod), post.replies.Size(), post.repliesAll.Size(),
-		uint64(post.parentID)))
+	json.WriteString(ufmt.Sprintf(`{"id": %d, "createdAt": %s, "creator": "%s", "user_posts_addr": "%s", "thread_id": %d, "n_gnods": %d, "n_replies": %d, "n_replies_all": %d, "parent_id": %d`,
+		uint64(post.id), string(createdAt), post.creator.String(), post.userPosts.userAddr.String(), uint64(post.threadID),
+		post.GetReactionCount(Gnod), post.replies.Size(), post.repliesAll.Size(), uint64(post.parentID)))
 	if post.repostUser != "" {
 		json.WriteString(ufmt.Sprintf(`, "repost_user": %s`, strconv.Quote(post.repostUser.String())))
 	}

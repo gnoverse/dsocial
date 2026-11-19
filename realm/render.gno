@@ -4,9 +4,14 @@ import (
 	"strconv"
 	"strings"
 
+	"gno.land/p/nt/bptree/pager/v0"
+	"gno.land/p/nt/bptree/v0"
 	"gno.land/p/nt/markdown/sanitize/v0"
 	"gno.land/r/sys/users"
 )
+
+// The number of posts on each page of a hashtag's posts.
+const hashtagPageSize = 20
 
 // resolveAddr looks up an address by registered name first, then falls back
 // to treating the input as a raw address. This allows unregistered users to
@@ -19,7 +24,37 @@ func resolveAddr(nameOrAddr string) address {
 	return address(nameOrAddr)
 }
 
-func Render(path string) string {
+// Render the posts with the hashtag, newest first. rawPath may have a query like "?page=2".
+func renderHashtagPosts(rawPath string, hashtag string) string {
+	hashtag = strings.ToLower(hashtag)
+	postsI := gPostsByHashtag.Get(hashtag)
+	if postsI == nil {
+		return "No posts with hashtag: " + sanitize.InlineText(hashtag)
+	}
+
+	p := pager.NewPager(postsI.(*bptree.BPTree), hashtagPageSize, true)
+	// Don't allow "?size=", which could make one page with all the posts.
+	p.SizeQueryParam = ""
+	page, err := p.GetPageByPath(rawPath)
+	if err != nil {
+		return "invalid path: " + sanitize.InlineText(rawPath)
+	}
+
+	str := "Posts with #" + sanitize.InlineText(hashtag) + "\n\n"
+	for _, item := range page.Items {
+		str += "----------------------------------------\n"
+		str += item.Value.(*Post).RenderSummary() + "\n"
+	}
+	if picker := page.Picker(rawPath); picker != "" {
+		str += "----------------------------------------\n"
+		str += picker + "\n"
+	}
+	return str
+}
+
+func Render(rawPath string) string {
+	// Remove a query like "?page=2". (Only paginated pages use it.)
+	path, _, _ := strings.Cut(rawPath, "?")
 	if path == "" {
 		str := "Welcome to dSocial!\n\n"
 
@@ -33,6 +68,11 @@ func Render(path string) string {
 	}
 
 	parts := strings.Split(path, "/")
+	if len(parts) == 2 && parts[0] == "_tag" {
+		// /r/berty/social:_tag/HASHTAG
+		return renderHashtagPosts(rawPath, parts[1])
+	}
+
 	if len(parts) == 1 {
 		// /r/berty/social:USER_NAME_OR_ADDR
 		userAddr := resolveAddr(path)

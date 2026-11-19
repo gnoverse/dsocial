@@ -65,6 +65,7 @@ func (userPosts *UserPosts) addThread(body string) *Post {
 	userPosts.threads.Set(pidkey, thread)
 	// Also add to the home posts.
 	userPosts.homePosts.Set(pidkey, thread)
+	addPostToHashtags(thread)
 	return thread
 }
 

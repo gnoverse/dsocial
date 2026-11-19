@@ -64,10 +64,10 @@ function Page() {
   const fetchData = async () => {
     if (!post) return;
 
-    console.log("fetching post: ", post.user.address);
+    console.log("fetching post: ", post.user_posts_addr, post.thread_id, post.id);
     setLoading("Loading post...");
     try {
-      const thread = await feed.fetchThread(String(post.user.address), Number(post.id));
+      const thread = await feed.fetchThread(post);
       setThread(thread.data);
     } catch (error) {
       console.error("failed on [post_id].tsx screen", error);

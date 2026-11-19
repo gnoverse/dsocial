@@ -9,7 +9,8 @@ import (
 var (
 	gUserPostsByAddress bptree.BPTree // user's address -> *UserPosts
 	gUserAddressByName  bptree.BPTree // user's username -> address
-	postsCtr            uint64   // increments Post.id globally
+	gPostsByHashtag     bptree.BPTree // hashtag (lowercase, without #) -> *bptree.BPTree of PostID -> *Post
+	postsCtr            uint64        // increments Post.id globally
 
 	// gRealmPath is the realm's relative URL path (e.g. "/r/g1.../social"),
 	// derived from the deployed package path at init time.

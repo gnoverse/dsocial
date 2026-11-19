@@ -11,6 +11,7 @@ import RepostLabel from "./repost-label";
 import { RepostRow } from "./repost-row";
 import GnodLabel from "./gnod-label";
 import PostContentLabel from "./post-content-label";
+import { isReply } from "@gno/utils/post-utils";
 
 interface FeedProps {
   post?: Post;
@@ -36,6 +37,12 @@ export function PostRow({ post, onPress = func, onGnod = func, showFooter = true
     router.navigate({ pathname: "account" });
   };
 
+  // Push (not navigate) so that tapping a hashtag on the hashtag screen opens a new screen.
+  // The realm makes the hashtag lowercase.
+  const navigateToHashtag = (hashtag: string) => {
+    router.push({ pathname: "/hashtag/[hashtag]", params: { hashtag } });
+  };
+
   if (!post) {
     return null;
   }
@@ -53,14 +60,16 @@ export function PostRow({ post, onPress = func, onGnod = func, showFooter = true
             </Pressable>
           </View>
 
-          <PostContentLabel onMentionPress={(value) => nativgateToAccount(value)}>{post.post}</PostContentLabel>
+          <PostContentLabel onMentionPress={(value) => nativgateToAccount(value)} onHashtagPress={navigateToHashtag}>
+            {post.post}
+          </PostContentLabel>
           {isRepost ? <RepostRow post={post.repost_parent} onPress={onPress} showFooter={false} /> : null}
         </View>
       </View>
       {showFooter ? (
         <View style={[styles.footer]}>
           <GnodLabel style={styles.reply} post={post} onGnod={onGnod} />
-          <RepostButton style={styles.reply} post={post} onPressRepost={onPressRepost} />
+          {isReply(post) ? null : <RepostButton style={styles.reply} post={post} onPressRepost={onPressRepost} />}
           <RepliesLabel replyCount={post.n_replies} style={styles.reply} />
         </View>
       ) : null}

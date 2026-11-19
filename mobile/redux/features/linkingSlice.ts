@@ -100,8 +100,7 @@ export const gnodTxAndRedirectToSign = createAsyncThunk<void, GnodCallTxParams, 
     const fnc = "AddReaction";
     const gasFee = "1000000ugnot";
     const gasWanted = BigInt(10000000);
-    // post.user.address is in fact a bech32 address
-    const args: Array<string> = [String(post.user.address), String(post.id), String(post.id), String("0")];
+    const args: Array<string> = [post.user_posts_addr, String(post.thread_id), String(post.id), String("0")];
     const reason = "Gnoding a message";
     const session = (thunkAPI.getState() as RootState).linking.session;
 

@@ -25,6 +25,9 @@ const variants = {
   "primary-red": css`
     background-color: red;
   `,
+  "primary-green": css`
+    background-color: green;
+  `,
 };
 
 const textVariants = {
@@ -45,6 +48,9 @@ const textVariants = {
     color: white;
   `,
   "primary-red": css`
+    color: white;
+  `,
+  "primary-green": css`
     color: white;
   `,
 };

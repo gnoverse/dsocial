@@ -2,6 +2,7 @@ package social
 
 import (
 	"strconv"
+	"strings"
 
 	"gno.land/p/nt/bptree/v0"
 	"gno.land/p/nt/ufmt/v0"
@@ -154,6 +155,23 @@ func GetThreadPosts(userPostsAddr address, threadID int, replyID int, startIndex
 
 		return getPosts(reply.replies, startIndex, endIndex)
 	}
+}
+
+// Get posts (threads, replies and reposts from all users) with the hashtag, which is
+// case-insensitive and without the '#'. (Like render args "_tag/hashtag".)
+// The posts are oldest first. Limit the response to posts from startIndex up to (not including)
+// endIndex. If you just want the total count, set startIndex and endIndex to 0 and see the
+// response "n_threads". If there are no posts with the hashtag, then "n_threads" is 0.
+// The response is a JSON string in the same format as GetThreadPosts. A post may be a reply, so
+// to open it or act on it, use its "user_posts_addr" and "thread_id" (see Post.MarshalJSON).
+// Only a top-level thread (where "parent_id" is 0) can be reposted.
+func GetHashtagPosts(hashtag string, startIndex int, endIndex int) string {
+	postsI := gPostsByHashtag.Get(strings.ToLower(hashtag))
+	if postsI == nil {
+		return getPosts(bptree.BPTree{}, startIndex, endIndex)
+	}
+
+	return getPosts(*postsI.(*bptree.BPTree), startIndex, endIndex)
 }
 
 // Update the home posts by scanning all posts from all followed users and adding the

@@ -1,4 +1,5 @@
 import AccountView from "./account";
 import FeedView from "./feed/feed-view";
+import HashtagView from "./hashtag";
 
-export { AccountView, FeedView };
+export { AccountView, FeedView, HashtagView };

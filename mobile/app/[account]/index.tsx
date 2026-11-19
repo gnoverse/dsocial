@@ -63,10 +63,11 @@ export default function Page() {
     console.log("fetchData", accountName);
     if (!accountName) return;
 
-    console.log("fetching data for account: ", currentUser?.bech32);
-
     try {
       setLoading("Loading account...");
+      // TODO: This doesn't work for an unregistered user. Will fix after
+      // two updates: Using the new gnoconnect protocol, and updating
+      // to use vm/qeval_json.
       const response = await search.getJsonUserByName(accountName);
 
       if (!response) {

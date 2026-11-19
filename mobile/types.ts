@@ -5,6 +5,10 @@ type PostInterface = {
   post: string;
   date: string;
   id: string;
+  // The owner of the posts and the top-level thread ID, to use for GetThreadPosts, PostReply,
+  // AddReaction, etc. For a reply, these are not the creator and id. See isReply.
+  user_posts_addr: string;
+  thread_id: number;
   n_replies: number;
   n_gnods: number;
   n_replies_all: number;

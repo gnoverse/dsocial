@@ -21,8 +21,8 @@ export const repostTxAndRedirectToSign = createAsyncThunk<void, RepostTxAndRedir
   const { post, replyContent, callerAddressBech32 } = props;
 
   const fnc = "RepostThread";
-  // post.user.address is in fact a bech32 address
-  const args: Array<string> = [String(post.user.address), String(post.id), replyContent];
+  // Only a top-level thread can be reposted, so thread_id is the same as id.
+  const args: Array<string> = [post.user_posts_addr, String(post.thread_id), replyContent];
   const gasFee = "1000000ugnot";
   const gasWanted = BigInt(10000000);
   const reason = "Repost a message";
@@ -46,7 +46,8 @@ export const replyTxAndRedirectToSign = createAsyncThunk<void, ReplytTxAndRedire
   const fnc = "PostReply";
   const gasFee = "1000000ugnot";
   const gasWanted = BigInt(10000000);
-  const args: Array<string> = [String(post.user.address), String(post.id), String(post.id), replyContent];
+  // For a reply, this adds a sub reply to it in the thread.
+  const args: Array<string> = [post.user_posts_addr, String(post.thread_id), String(post.id), replyContent];
   const reason = "Reply a message";
   // const session = (thunkAPI.getState() as RootState).linking.session;
 
