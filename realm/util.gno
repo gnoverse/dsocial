@@ -177,6 +177,10 @@ func hasLetter(s string) bool {
 
 // Return the unique hashtags in body (see forEachHashtag), lowercase and without the '#', in
 // order of first appearance. Return nil if there are no hashtags.
+// Note that this finds all hashtags, even inside formatting structures like ```#tag``` .
+// Unlike RenderPost which uses markdownScanner, we don't know whether the
+// post will ultimately be shown as markdown. (Another reason is that, unlike RenderPost,
+// this is called in a tx with paid gas, so we don't want too much processing.)
 func parseHashtags(body string) []string {
 	var hashtags []string
 	forEachHashtag(body, func(start, end int) {
@@ -194,11 +198,15 @@ func parseHashtags(body string) []string {
 // Return body[:n] with each hashtag (see forEachHashtag) replaced by a markdown link to its
 // _tag/HASHTAG page. Don't link a hashtag which continues past n, since it would link to the
 // wrong page. n must be at a character boundary.
-// If escape is nil, the result is for sanitize.Block, which keeps inline links. Otherwise,
-// apply escape (like sanitize.InlineText) to the link text and to the text between links.
+// If escape is nil, body is Markdown and the result is for sanitize.Block, which keeps inline
+// links. Leave a hashtag as is where a link would break the Markdown (see markdownScanner).
+// Otherwise, body is plain text, and apply escape (like sanitize.InlineText) to the link text
+// and to the text between links.
 // (A hashtag can't contain ']' or ')', so it can't break out of the link.)
 func linkHashtags(body string, n int, escape func(string) string) string {
+	var md *markdownScanner
 	if escape == nil {
+		md = &markdownScanner{}
 		escape = func(s string) string { return s }
 	}
 	text := body[:n]
@@ -210,13 +218,70 @@ func linkHashtags(body string, n int, escape func(string) string) string {
 				return
 			}
 		}
+		hash := start - 1 // The index of the '#'.
+		if md != nil && !md.canLink(text, hash, end) {
+			return
+		}
 		hashtag := text[start:end]
-		b.WriteString(escape(text[prevEnd : start-1])) // start-1 is the '#'.
+		b.WriteString(escape(text[prevEnd:hash]))
 		b.WriteString("[" + escape("#"+hashtag) + "](" + gRealmPath + ":_tag/" + strings.ToLower(hashtag) + ")")
 		prevEnd = end
 	})
 	b.WriteString(escape(text[prevEnd:]))
 	return b.String()
+}
+
+// markdownScanner tracks whether a hashtag in Markdown text is where linkHashtags can replace it
+// with a link, and not in a code span or fenced code block, in link text, or in a link
+// destination or title. This is a simple scan for the Markdown in a typical post. It is not a
+// solution for general or malformed Markdown. Unbalanced delimiters (like a stray '[' or '`')
+// leave the hashtags after them as is, and some unusual Markdown can still put a link where it
+// shows as literal text.
+type markdownScanner struct {
+	pos      int  // The index in the text where the next scan starts.
+	prev     byte // The byte before pos, or 0.
+	inCode   bool // Whether in a code span or fence.
+	brackets int  // The depth of '[' (link text).
+	parens   int  // The depth of '(' after ']' (a link destination and title).
+}
+
+// Scan text up to the '#' at text[hash] of the hashtag which ends at text[end], and report
+// whether linkHashtags can link the hashtag. Call this for the hashtags in order.
+func (md *markdownScanner) canLink(text string, hash int, end int) bool {
+	i := md.pos
+	for ; i < hash; i++ {
+		c := text[i]
+		switch {
+		case c == '`':
+			// A backtick run opens or closes a code span or fence.
+			md.inCode = !md.inCode
+			for i+1 < hash && text[i+1] == '`' {
+				i++
+			}
+		case md.inCode:
+			// Other bytes in code are literal.
+		case c == '\\':
+			i++ // Skip the escaped byte, which may be the '#'.
+		case c == '[':
+			md.brackets++
+		case c == ']' && md.brackets > 0:
+			md.brackets--
+		case c == '(' && (md.parens > 0 || md.prev == ']'):
+			md.parens++
+		case c == ')' && md.parens > 0:
+			md.parens--
+		}
+		md.prev = c
+	}
+	escaped := i > hash
+	// The hashtag itself has no delimiters to scan.
+	md.pos = end
+	md.prev = text[end-1]
+	if escaped || md.inCode || md.brackets > 0 || md.parens > 0 {
+		return false
+	}
+	// A link after '!' would be an image.
+	return hash == 0 || text[hash-1] != '!'
 }
 
 // Add post to gPostsByHashtag under each of its hashtags.
