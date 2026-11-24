@@ -6,49 +6,30 @@ import TextInput from "@gno/components/textinput";
 import { useNavigation, useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import { KeyboardAvoidingView, Platform } from "react-native";
-import { broadcastTxCommit, clearLinking, postTxAndRedirectToSign, selectAccount, selectQueryParamsTxJsonSigned, useAppDispatch, useAppSelector } from "@gno/redux";
+import { postTxAndRedirectToSign, selectAccount, useAppSelector } from "@gno/redux";
+import { useWalletTx } from "@gno/hooks/use-wallet-tx";
 import { SessionCountDown } from "@gno/components/counter/session-countdown";
 
 export default function Search() {
   const [postContent, setPostContent] = useState("");
-  const [error, setError] = useState<string | undefined>(undefined);
-  const [loading, setLoading] = useState(false);
+  // True while waiting for the indexer.
+  const [indexing, setIndexing] = useState(false);
 
   const navigation = useNavigation();
   const router = useRouter();
-  const dispatch = useAppDispatch();
   const account = useAppSelector(selectAccount);
   // const sessionInMinutes = useAppSelector(selectSessionValidUntil);
 
-  const txJsonSigned = useAppSelector(selectQueryParamsTxJsonSigned);
-
-  // hook to handle the signed tx from the Gnokey and broadcast it
-  useEffect(() => {
-    const handleSignedTx = async () => {
-      if (txJsonSigned) {
-        const signedTx = decodeURIComponent(txJsonSigned as string);
-        console.log("signedTx: ", signedTx);
-
-        try {
-          setLoading(true);
-          await dispatch(clearLinking())
-          await dispatch(broadcastTxCommit(signedTx))
-          setTimeout(() => {
-            router.push("home");
-          }, 3000);
-        } catch (error) {
-          console.error("on broadcastTxCommit", error);
-          setError("" + error);
-        }
-      }
-    };
-    handleSignedTx();
-  }, [txJsonSigned]);
+  const postTx = useWalletTx(() => {
+    setIndexing(true);
+    // Let the indexer see the post before showing the feed.
+    setTimeout(() => router.dismissTo("/home/feed"), 3000);
+  });
 
   useEffect(() => {
     const unsubscribe = navigation.addListener("focus", async () => {
       setPostContent("");
-      setLoading(false);
+      setIndexing(false);
       if (!account) throw new Error("No active account");
     });
     return unsubscribe;
@@ -56,7 +37,7 @@ export default function Search() {
 
   const onPressPost = async () => {
     if (!account || !account.bech32) throw new Error("No active account: " + JSON.stringify(account));
-    await dispatch(postTxAndRedirectToSign({ callerAddressBech32: account.bech32, postContent })).unwrap();
+    await postTx.send(postTxAndRedirectToSign({ callerAddressBech32: account.bech32, postContent }));
   }
 
   return (
@@ -80,7 +61,7 @@ export default function Search() {
             style={{ height: 200 }}
           />
           <Spacer space={24} />
-          <Button.TouchableOpacity loading={loading} title="Post" variant="primary" onPress={onPressPost} />
+          <Button.TouchableOpacity loading={postTx.pending || indexing} disabled={postTx.pending || indexing} title="Post" variant="primary" onPress={onPressPost} />
           <Spacer space={48} />
         </KeyboardAvoidingView>
       </Layout.BodyAlignedBotton>

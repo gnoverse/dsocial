@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from "react";
 import { Provider } from "react-redux";
 import { configureStore } from "@reduxjs/toolkit";
-import { accountSlice, profileSlice, replySlice, linkingSlice } from "./features";
+import { accountSlice, profileSlice, replySlice, linkingSlice, feedbackSlice, switchNetwork } from "./features";
+import { feedbackReporter } from "./middleware/feedback-reporter";
 import { GnoNativeApi, useGnoNativeContext } from "@gnolang/gnonative";
 import { useSearch, UseSearchReturnType } from "@gno/hooks/use-search";
 import { useNotificationContext, UseNotificationReturnType } from "@gno/provider/notification-provider";
@@ -16,14 +17,19 @@ export interface ThunkExtra {
   extra: { gnonative: GnoNativeApi; search: UseSearchReturnType; push: UseNotificationReturnType, userCache: ReturnType<typeof useUserCache> };
 }
 
+// Reset the slice on switchNetwork, since it has data from the previous chain.
+const resetOnNetworkSwitch = <R extends (state: any, action: any) => any>(sliceReducer: R): R =>
+  ((state, action) => sliceReducer(action.type === switchNetwork.fulfilled.type ? undefined : state, action)) as R;
+
 const reducer = {
-  [accountSlice.reducerPath]: accountSlice.reducer,
-  [profileSlice.reducerPath]: profileSlice.reducer,
-  [replySlice.reducerPath]: replySlice.reducer,
-  [linkingSlice.reducerPath]: linkingSlice.reducer,
+  [accountSlice.reducerPath]: resetOnNetworkSwitch(accountSlice.reducer),
+  [profileSlice.reducerPath]: resetOnNetworkSwitch(profileSlice.reducer),
+  [replySlice.reducerPath]: resetOnNetworkSwitch(replySlice.reducer),
+  [linkingSlice.reducerPath]: resetOnNetworkSwitch(linkingSlice.reducer),
+  [feedbackSlice.reducerPath]: feedbackSlice.reducer,
 }
 
-export type RootState = typeof reducer
+export type RootState = { [K in keyof typeof reducer]: ReturnType<(typeof reducer)[K]> };
 
 const ReduxProvider: React.FC<Props> = ({ children }) => {
   // Exposing GnoNative API to reduxjs/toolkit
@@ -52,7 +58,7 @@ const ReduxProvider: React.FC<Props> = ({ children }) => {
               userCache,
             },
           },
-        }),
+        }).concat(feedbackReporter),
     });
     setStore(storeInstance)
     // eslint-disable-next-line react-hooks/exhaustive-deps

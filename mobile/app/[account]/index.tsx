@@ -1,13 +1,13 @@
 import { useCallback, useEffect, useState } from "react";
-import { useDispatch } from "react-redux";
-import { router, useNavigation, usePathname } from "expo-router";
+import { router, useNavigation } from "expo-router";
 import { AccountView } from "@gno/components/view";
 import { useSearch } from "@gno/hooks/use-search";
 import { Following, Post, User } from "@gno/types";
-import { broadcastTxCommit, clearLinking, selectQueryParamsTxJsonSigned, setPostToReply, useAppSelector, selectAccount, gnodTxAndRedirectToSign } from "@gno/redux";
+import { setPostToReply, useAppDispatch, useAppSelector, selectAccount, gnodTxAndRedirectToSign } from "@gno/redux";
 import { followTxAndRedirectToSign, selectProfileAccountName, setFollows, unfollowTxAndRedirectToSign } from "redux/features/profileSlice";
 import { useFeed } from "@gno/hooks/use-feed";
 import { useUserCache } from "@gno/hooks/use-user-cache";
+import { useWalletTx } from "@gno/hooks/use-wallet-tx";
 import ErrorView from "@gno/components/view/account/no-account-view";
 import Layout from "@gno/components/layout";
 import { colors } from "@gno/styles/colors";
@@ -26,31 +26,9 @@ export default function Page() {
   const feed = useFeed();
   const search = useSearch();
   const userCache = useUserCache();
-  const dispatch = useDispatch();
+  const dispatch = useAppDispatch();
 
   const currentUser = useAppSelector(selectAccount);
-  const txJsonSigned = useAppSelector(selectQueryParamsTxJsonSigned);
-
-  const pathName = usePathname();
-
-  useEffect(() => {
-
-    (async () => {
-      if (txJsonSigned) {
-        console.log("txJsonSigned in [account] page: ", txJsonSigned);
-        const signedTx = decodeURIComponent(txJsonSigned as string)
-        try {
-          await dispatch(broadcastTxCommit(signedTx)).unwrap();
-        } catch (error) {
-          console.error("on broadcastTxCommit", error);
-        }
-
-        dispatch(clearLinking());
-        fetchData();
-      }
-    })();
-
-  }, [txJsonSigned]);
 
   useEffect(() => {
     const unsubscribe = navigation.addListener("focus", async () => {
@@ -114,6 +92,10 @@ export default function Page() {
     }
   }, [accountName]);
 
+  const walletTx = useWalletTx(() => {
+    fetchData();
+  });
+
   const onPressFollowing = () => {
     router.navigate({ pathname: "account/following" });
   };
@@ -122,21 +104,21 @@ export default function Page() {
     router.navigate({ pathname: "account/followers" });
   };
 
-  const onPressFollow = async (address: string, callerAddress: Uint8Array) => {
-    await dispatch(followTxAndRedirectToSign({ address, callerAddress })).unwrap();
+  const onPressFollow = async (address: string) => {
+    if (!currentUser) throw new Error("No active account");
+    await walletTx.send(followTxAndRedirectToSign({ address, callerAddressBech32: currentUser.bech32 }));
   };
 
-  const onPressUnfollow = async (address: string, callerAddress: Uint8Array) => {
-    await dispatch(unfollowTxAndRedirectToSign({ address, callerAddress })).unwrap();
+  const onPressUnfollow = async (address: string) => {
+    if (!currentUser) throw new Error("No active account");
+    await walletTx.send(unfollowTxAndRedirectToSign({ address, callerAddressBech32: currentUser.bech32 }));
   };
 
   const onGnod = async (post: Post) => {
     console.log("gnodding post: ", post);
-    setLoading("Gnoding...");
-
     if (!currentUser) throw new Error("No active account");
 
-    dispatch(gnodTxAndRedirectToSign({ post, callerAddressBech32: currentUser.bech32, callbackPath: pathName })).unwrap();
+    await walletTx.send(gnodTxAndRedirectToSign({ post, callerAddressBech32: currentUser.bech32 }));
   };
 
   const onPressPost = async (item: Post) => {
@@ -152,7 +134,6 @@ export default function Page() {
         <ErrorView message={error} />
       ) : (
         <AccountView
-          callerAddress={currentUser.address}
           user={user}
           currentUser={currentUser}
           totalPosts={totalPosts}

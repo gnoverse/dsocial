@@ -1,5 +1,6 @@
 import * as FileSystem from 'expo-file-system';
 import * as ImageManipulator from 'expo-image-manipulator';
+import { stripWebpMetadata } from './webp';
 
 export async function convertImageToBase64(imagePath: string): Promise<string | undefined> {
   try {
@@ -12,42 +13,28 @@ export async function convertImageToBase64(imagePath: string): Promise<string | 
   }
 }
 
-export async function compressImage(imagePath: string, maxSizeKB: number = 200): Promise<{ base64?: string, uri: string } | undefined> {
-  try {
+// The profile realm emits the value in an event, whose attributes are limited to this by the chain (see
+// MaxEventAttrLen in gno). A longer value makes the transaction fail.
+const MAX_AVATAR_LENGTH = 4096;
 
-    let quality = 0.1;
-    let compressedUri = imagePath;
-    let fileSizeInKB = await getFileSizeInKB(compressedUri);
+const AVATAR_HEIGHT = 96;
 
-    console.log("Original image size: %s, quality: %s", fileSizeInKB, quality);
+// Tried in order until the avatar is small enough.
+const AVATAR_QUALITIES = [0.5, 0.35, 0.2, 0.1];
 
-    const data = await ImageManipulator.manipulateAsync(
-      imagePath,
-      [{ resize: { height: 200 } }],
-      {
-        compress: quality, format: ImageManipulator.SaveFormat.JPEG,
-        // return base64 image:
-        base64: true
-      }
-    );
-    compressedUri = data.uri;
-    fileSizeInKB = await getFileSizeInKB(compressedUri);
-
-    if (fileSizeInKB && fileSizeInKB > maxSizeKB) {
-      console.error("Unable to compress image to desired size. Current size:", fileSizeInKB);
-      return undefined
-    }
-
-    return { base64: data.base64, uri: compressedUri };
-
-  } catch (error) {
-    console.error(error);
-    return undefined
+/** Make an avatar from the image, as a data URI which is small enough to be stored in the profile realm. */
+export async function makeAvatarDataUri(imagePath: string): Promise<string> {
+  for (const quality of AVATAR_QUALITIES) {
+    const image = await ImageManipulator.manipulateAsync(imagePath, [{ resize: { height: AVATAR_HEIGHT } }], {
+      compress: quality,
+      format: ImageManipulator.SaveFormat.WEBP,
+      base64: true,
+    });
+    if (!image.base64) continue;
+    const dataUri = `data:image/webp;base64,${stripWebpMetadata(image.base64)}`;
+    console.log("avatar length: %s, quality: %s", dataUri.length, quality);
+    if (dataUri.length <= MAX_AVATAR_LENGTH) return dataUri;
   }
-};
 
-async function getFileSizeInKB(uri: string): Promise<number | undefined> {
-  const info = await FileSystem.getInfoAsync(uri);
-  if (info.exists) return info.size / 1024;
-  return undefined;
-};
+  throw new Error("This image is too detailed for an avatar. Please choose another one.");
+}

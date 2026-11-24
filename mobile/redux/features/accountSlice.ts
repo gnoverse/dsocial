@@ -1,8 +1,10 @@
-import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
+import { createSlice } from "@reduxjs/toolkit";
+import { createAppAsyncThunk } from "../utils/async-thunk";
 import { makeCallTx } from "./linkingSlice";
 import { User } from "@gno/types";
 import { GnoNativeApi } from "@gnolang/gnonative";
 import { RootState, ThunkExtra } from "redux/redux-provider";
+import { getActiveNetwork } from "@gno/utils/network-store";
 
 export interface CounterState {
   account?: User;
@@ -14,18 +16,22 @@ const initialState: CounterState = {
   loading: false,
 };
 
-export const loggedIn = createAsyncThunk<User, void, ThunkExtra>("account/loggedIn", async (param, thunkAPI) => {
+export const loggedIn = createAppAsyncThunk<User, void, ThunkExtra>("account/loggedIn", async (param, thunkAPI) => {
   console.log("Logging in", param);
 
-  const { bech32AddressSelected: bech32, chainId, remoteURL } = (thunkAPI.getState() as RootState).linking;
+  const { bech32AddressSelected: bech32, chainId } = (thunkAPI.getState() as RootState).linking;
 
-  if (!bech32 || !chainId || !remoteURL) {
-    throw new Error("No bech32 address, chainId or remoteURL found for login");
+  if (!bech32) {
+    throw new Error("No bech32 address found for login");
   }
-  const gnonative = thunkAPI.extra.gnonative as GnoNativeApi;
 
-  await gnonative.setChainID(chainId);
-  await gnonative.setRemote(remoteURL);
+  // Our connect request names the chain. If the wallet answers for another one, don't sign in.
+  const network = getActiveNetwork();
+  if (chainId && chainId !== network.chainId) {
+    throw new Error(`The wallet is on chain "${chainId}" but the network selected here is "${network.chainId}".`);
+  }
+
+  const gnonative = thunkAPI.extra.gnonative as GnoNativeApi;
 
   const user: User = {
     name: (await getAccountName(bech32, gnonative)) || "Unknown",
@@ -52,42 +58,25 @@ async function getAccountName(bech32: string, gnonative: GnoNativeApi) {
 }
 
 interface AvatarCallTxParams {
-  mimeType: string;
-  base64: string;
+  dataUri: string;
   callerAddressBech32: string;
-  callbackPath: string;
 }
 
-export const avatarTxAndRedirectToSign = createAsyncThunk<void, AvatarCallTxParams, ThunkExtra>(
+export const avatarTxAndRedirectToSign = createAppAsyncThunk<string, AvatarCallTxParams, ThunkExtra>(
   "account/avatarTxAndRedirectToSign",
-  async (props, thunkAPI) => {
-    const { mimeType, base64, callerAddressBech32, callbackPath } = props;
-
-    const gnonative = thunkAPI.extra.gnonative;
-
-    const gasFee = "1000000ugnot";
-    const gasWanted = BigInt(10000000);
-    const args: Array<string> = ["Avatar", String(`data:${mimeType};base64,` + base64)];
-    const reason = "Upload a new avatar";
-    // const session = (thunkAPI.getState() as RootState).linking.session;
-
-    await makeCallTx(
-      {
-        packagePath: "gno.land/r/demo/profile",
-        fnc: "SetStringField",
-        args,
-        gasFee,
-        gasWanted,
-        callerAddressBech32,
-        reason,
-        callbackPath,
-      },
-      gnonative
-    );
-  }
+  ({ dataUri, callerAddressBech32 }) =>
+    makeCallTx({
+      packagePath: "gno.land/r/demo/profile",
+      fnc: "SetStringField",
+      args: [
+        ["field", "Avatar"],
+        ["value", dataUri],
+      ],
+      callerAddressBech32,
+    })
 );
 
-export const reloadAvatar = createAsyncThunk<string | undefined, void, ThunkExtra>(
+export const reloadAvatar = createAppAsyncThunk<string | undefined, void, ThunkExtra>(
   "account/reloadAvatar",
   async (param, thunkAPI) => {
     const state = (await thunkAPI.getState()) as CounterState;

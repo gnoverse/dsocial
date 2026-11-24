@@ -1,142 +1,156 @@
 import { Post } from "@gno/types";
-import { GnoNativeApi } from "@gnolang/gnonative";
-import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
-import * as Linking from 'expo-linking';
-import { RootState, ThunkExtra } from "redux/redux-provider";
+import { createSlice, PayloadAction } from "@reduxjs/toolkit";
+import * as Linking from "expo-linking";
+import { ThunkExtra } from "redux/redux-provider";
+import { createAppAsyncThunk } from "../utils/async-thunk";
+import { issueState } from "@gno/utils/callback-state";
+import { CALLBACK_URL, LaunchHost, makeLaunchLink } from "@gno/utils/gnoconnect";
+import { getActiveNetwork } from "@gno/utils/network-store";
+import { broadcastSignedTx } from "@gno/utils/tm2-rpc";
+
+const SOCIAL_REALM = "gno.land/r/berty/social";
+
+/** The outcome of a transaction request, which is identified by the `state` of its launch link. */
+export interface TxOutcome {
+  state: string;
+  status: "broadcasting" | "committed" | "failed";
+}
 
 interface State {
-    txJsonSigned: string | undefined;
-    bech32AddressSelected: string | undefined;
-    chainId: string | undefined;
-    remoteURL: string | undefined;
+  bech32AddressSelected: string | undefined;
+  chainId: string | undefined;
+  lastTx: TxOutcome | undefined;
 }
 
 const initialState: State = {
-    txJsonSigned: undefined,
-    bech32AddressSelected: undefined,
-    chainId: undefined,
-    remoteURL: undefined,
+  bech32AddressSelected: undefined,
+  chainId: undefined,
+  lastTx: undefined,
 };
 
-export const requestLoginForGnokeyMobile = createAsyncThunk<boolean>("tx/requestLoginForGnokeyMobile", async () => {
-    const url = new URL('land.gno.gnokey://tosignin');
-    url.searchParams.append('callback', 'tech.berty.dsocial://signin-callback');
-    url.searchParams.append('client_name', 'dSocial');
-    console.log("redirecting to: ", url);
-    return await Linking.openURL(url.toString());
-})
+// Open the wallet and return the `state` which its callback will echo.
+const openWallet = async (host: LaunchHost, params: [name: string, value: string][]): Promise<string> => {
+  const network = getActiveNetwork();
+  const state = issueState();
+  const url = makeLaunchLink(host, [
+    ...params,
+    ["rpc", network.rpc],
+    ["chainid", network.chainId],
+    ["callback", CALLBACK_URL],
+    ["state", state],
+  ]);
+
+  console.log("opening the wallet: %s", host);
+  try {
+    await Linking.openURL(url);
+  } catch (error) {
+    console.log("openURL", error);
+    throw new Error("Cannot open Gnokey Mobile. Is it installed?");
+  }
+  return state;
+};
+
+/** Ask the wallet for the user's address. It proves nothing: the authority is in the signed transactions. */
+export const requestLoginForGnokeyMobile = createAppAsyncThunk<string, void, ThunkExtra>("tx/requestLoginForGnokeyMobile", () =>
+  openWallet("connect", [])
+);
+
+export type MakeCallTxParams = {
+  packagePath?: string;
+  fnc: string;
+  /** The names must be those of the function's parameters in the realm (without `cur realm`). */
+  args: [name: string, value: string][];
+  callerAddressBech32: string;
+};
+
+/**
+ * Ask the wallet to sign a realm call (it chooses the gas). Return the `state` of the request. The
+ * wallet's answer goes to LinkingProvider, which broadcasts it. See useWalletTx to follow the outcome.
+ */
+export const makeCallTx = ({ packagePath = SOCIAL_REALM, fnc, args, callerAddressBech32 }: MakeCallTxParams): Promise<string> =>
+  openWallet("signtx", [
+    ["path", packagePath],
+    ["func", fnc],
+    ...args.map(([name, value]): [string, string] => [`arg.${name}`, value]),
+    // Pin the account, since the user can select another one in the wallet.
+    ["signer", callerAddressBech32],
+  ]);
 
 type MakeTxAndRedirectParams = {
-    postContent: string,
-    callerAddressBech32: string,
+  postContent: string;
+  callerAddressBech32: string;
 };
 
-export const postTxAndRedirectToSign = createAsyncThunk<void, MakeTxAndRedirectParams, ThunkExtra>("tx/makeCallTxAndRedirectToSign", async (props, thunkAPI) => {
-    const { callerAddressBech32, postContent } = props;
-
-    const fnc = "PostMessage";
-    const args: Array<string> = [postContent];
-    const gasFee = "1000000ugnot";
-    const gasWanted = BigInt(10000000);
-    const reason = "Post a message";
-    const callbackPath = "/post";
-
-    await makeCallTx({ fnc, args, gasFee, gasWanted, callerAddressBech32, reason, callbackPath }, thunkAPI.extra.gnonative);
-})
-
-type MakeCallTxParams = {
-    packagePath?: string,
-    fnc: string,
-    args: string[],
-    gasFee: string,
-    gasWanted: bigint,
-    send?: string,
-    memo?: string,
-    callerAddressBech32: string,
-    reason: string,
-    callbackPath: string,
-};
-
-export const makeCallTx = async (props: MakeCallTxParams, gnonative: GnoNativeApi): Promise<void> => {
-    const { fnc, callerAddressBech32, gasFee, gasWanted, args, packagePath = "gno.land/r/berty/social", reason, callbackPath } = props;
-
-    console.log("making a tx for: ", callerAddressBech32);
-    const address = await gnonative.addressFromBech32(callerAddressBech32);
-
-    const res =  await gnonative.makeCallTx(packagePath, fnc, args, gasFee, gasWanted, address)
-
-    const url = new URL('land.gno.gnokey://tosign');
-    url.searchParams.append('chain_id', await gnonative.getChainID());
-    url.searchParams.append('remote', await gnonative.getRemote());
-    url.searchParams.append('tx', res.txJson);
-    url.searchParams.append("update_tx", "true");
-    url.searchParams.append('address', callerAddressBech32);
-    url.searchParams.append('client_name', 'dSocial');
-    url.searchParams.append('reason', reason);
-    url.searchParams.append('callback', 'tech.berty.dsocial:/' + callbackPath);
-
-    console.log("redirecting to: ", url);
-    Linking.openURL(url.toString());
-}
-
-export const broadcastTxCommit = createAsyncThunk<void, string, ThunkExtra>("tx/broadcastTxCommit", async (signedTx, thunkAPI) => {
-    console.log("broadcasting tx: ", signedTx);
-
-    const gnonative = thunkAPI.extra.gnonative;
-    const res = await gnonative.broadcastTxCommit(signedTx);
-    console.log("broadcasted tx: ", res);
-});
+export const postTxAndRedirectToSign = createAppAsyncThunk<string, MakeTxAndRedirectParams, ThunkExtra>(
+  "tx/makeCallTxAndRedirectToSign",
+  ({ callerAddressBech32, postContent }) =>
+    makeCallTx({ fnc: "PostMessage", args: [["body", postContent]], callerAddressBech32 })
+);
 
 interface GnodCallTxParams {
-    post: Post,
-    callerAddressBech32: string,
-    callbackPath: string,
+  post: Post;
+  callerAddressBech32: string;
 }
 
-export const gnodTxAndRedirectToSign = createAsyncThunk<void, GnodCallTxParams, ThunkExtra>("tx/gnodTxAndRedirectToSign", async (props, thunkAPI) => {
-    console.log("gnodding post: ", props.post);
-    const { post, callerAddressBech32, callbackPath } = props;
+export const gnodTxAndRedirectToSign = createAppAsyncThunk<string, GnodCallTxParams, ThunkExtra>(
+  "tx/gnodTxAndRedirectToSign",
+  ({ post, callerAddressBech32 }) =>
+    makeCallTx({
+      fnc: "AddReaction",
+      args: [
+        ["userPostsAddr", post.user_posts_addr],
+        ["threadid", String(post.thread_id)],
+        ["postid", String(post.id)],
+        ["reaction", "0"],
+      ],
+      callerAddressBech32,
+    })
+);
 
-    const fnc = "AddReaction";
-    const gasFee = "1000000ugnot";
-    const gasWanted = BigInt(10000000);
-    const args: Array<string> = [post.user_posts_addr, String(post.thread_id), String(post.id), String("0")];
-    const reason = "Gnoding a message";
-    const session = (thunkAPI.getState() as RootState).linking.session;
-
-    // await makeCallTx({ fnc, args, gasFee, gasWanted, callerAddressBech32, reason, callbackPath, session }, thunkAPI.extra.gnonative);
-    await makeCallTx({ fnc, args, gasFee, gasWanted, callerAddressBech32, reason, callbackPath }, thunkAPI.extra.gnonative);
-});
+/** Broadcast the transaction which the wallet signed for the request with this `state`. */
+export const broadcastTx = createAppAsyncThunk<void, { state: string; signedTx: string }, ThunkExtra>(
+  "tx/broadcastTx",
+  ({ signedTx }) => broadcastSignedTx(getActiveNetwork().rpc, signedTx)
+);
 
 /**
  * Slice to handle linking between the app and the GnokeyMobile app
  */
 export const linkingSlice = createSlice({
-    name: "linking",
-    initialState,
-    reducers: {
-        setLinkingData: (state, action) => {
-            const queryParams = action.payload.queryParams
-
-            state.bech32AddressSelected = queryParams?.address ? queryParams.address as string : undefined
-            state.txJsonSigned = queryParams?.tx ? queryParams.tx as string : undefined
-            state.chainId = queryParams?.chain_id ? queryParams.chain_id as string : undefined
-            state.remoteURL = queryParams?.remote ? queryParams.remote as string : undefined
-        },
-        clearLinking: (state) => {
-            console.log("clearing linking data");
-            state = { ...initialState };
-        }
+  name: "linking",
+  initialState,
+  reducers: {
+    /** The wallet's answer to `connect`. */
+    setLinkingData: (state, action: PayloadAction<{ address: string; chainId?: string }>) => {
+      state.bech32AddressSelected = action.payload.address;
+      state.chainId = action.payload.chainId;
     },
-    selectors: {
-        selectQueryParamsTxJsonSigned: (state: State) => state.txJsonSigned as string | undefined,
-        selectBech32AddressSelected: (state: State) => state.bech32AddressSelected as string | undefined,
-        selectChainId: (state: State) => state.chainId as string | undefined,
-        selectRemoteURL: (state: State) => state.remoteURL as string | undefined,
+    /** The wallet's refusal of any request. `code` is the standard's enumerated reason. */
+    walletFailed: (state, action: PayloadAction<{ state: string; status: string; code?: string }>) => {
+      state.lastTx = { state: action.payload.state, status: "failed" };
+    },
+    clearLinking: (state) => {
+      state.bech32AddressSelected = undefined;
+      state.chainId = undefined;
+    },
+  },
+  extraReducers(builder) {
+    builder.addCase(broadcastTx.pending, (state, action) => {
+      state.lastTx = { state: action.meta.arg.state, status: "broadcasting" };
+    });
+    builder.addCase(broadcastTx.fulfilled, (state, action) => {
+      state.lastTx = { state: action.meta.arg.state, status: "committed" };
+    });
+    builder.addCase(broadcastTx.rejected, (state, action) => {
+      state.lastTx = { state: action.meta.arg.state, status: "failed" };
+    });
+  },
+  selectors: {
+    selectBech32AddressSelected: (state: State) => state.bech32AddressSelected,
+    selectLastTx: (state: State) => state.lastTx,
   },
 });
 
-export const { clearLinking, setLinkingData } = linkingSlice.actions;
+export const { clearLinking, setLinkingData, walletFailed } = linkingSlice.actions;
 
-export const { selectQueryParamsTxJsonSigned, selectBech32AddressSelected, selectChainId, selectRemoteURL } =
-  linkingSlice.selectors;
+export const { selectBech32AddressSelected, selectLastTx } = linkingSlice.selectors;
