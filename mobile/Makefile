@@ -9,11 +9,11 @@ node_modules: package.json package-lock.json
 	(npm install && touch $@) || true
 .PHONY: node_modules
 
+# - IOS
+
 ios: node_modules ts_check # Run the iOS app
 	npx expo run:ios
 .PHONY: ios
-
-# - IOS
 
 ios.release_mode: node_modules ts_check # Run the iOS app in release mode
 	npx expo run:ios --configuration Release
@@ -28,6 +28,10 @@ ios.release_production: node_modules ts_check
 android: node_modules ts_check # Run the Android app
 	npx expo run:android
 .PHONY: android
+
+android.release_mode: node_modules ts_check # Run the Android app in release mode
+	npx expo run:android --variant release
+.PHONY: android.release_mode
 
 android.release_production: node_modules ts_check
 	$(call check-file, google-services.json)
