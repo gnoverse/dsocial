@@ -45,7 +45,7 @@ func TestParseHashtags(t *testing.T) {
 		{"#a #A #a", []string{"a"}},
 		{"(#paren) [#bracket], #comma,", []string{"paren", "bracket", "comma"}},
 		{"line1\n#next_line", []string{"next_line"}},
-		{"#café #日本 #v2", []string{"café", "日本", "v2"}},
+		{"#café #日本 #v2 é#x", []string{"café", "日本", "v2"}},
 		{"#foo#bar", []string{"foo"}},
 		{"#don't #Bob’s '#quoted'", []string{"don", "bob", "quoted"}},
 		{"issue #1 and #_ and # alone and #", nil},
@@ -77,6 +77,7 @@ func TestParseHashtags(t *testing.T) {
 
 func TestLinkHashtags(t *testing.T) {
 	tag := gRealmPath + ":_tag/"
+	gno := "[#gno](" + tag + "gno)"
 	tests := []struct {
 		body string
 		want string
@@ -86,6 +87,25 @@ func TestLinkHashtags(t *testing.T) {
 		{"#Gno", "[#Gno](" + tag + "gno)"},
 		{"Hi #gno, #1 and a#b #日本!", "Hi [#gno](" + tag + "gno), #1 and a#b [#日本](" + tag + "日本)!"},
 		{"line1\n#next_line end", "line1\n[#next_line](" + tag + "next_line) end"},
+		{"(#paren) #gno", "([#paren](" + tag + "paren)) " + gno},
+
+		// Leave a hashtag as is in a code span or fence, link text, or a link destination or title.
+		{"[Search](https://example.com?q=#gno) #gno", "[Search](https://example.com?q=#gno) " + gno},
+		{"Use `#gno` or #gno", "Use `#gno` or " + gno},
+		{"```go\n#include `x`\n\n#gno\n```\n#gno", "```go\n#include `x`\n\n#gno\n```\n" + gno},
+		{"[about #gno](https://gno.land) ![#gno](https://gno.land/a.png) #gno",
+			"[about #gno](https://gno.land) ![#gno](https://gno.land/a.png) " + gno},
+		{"[a](https://gno.land \"t #gno\") #gno", "[a](https://gno.land \"t #gno\") " + gno},
+		{"[w](https://en.wikipedia.org/wiki/Foo_(bar)#x) #gno", "[w](https://en.wikipedia.org/wiki/Foo_(bar)#x) " + gno},
+		{"[#bracket] #gno", "[#bracket] " + gno},
+		// "\#" is an escaped '#', but "\\" is an escaped '\'.
+		{"\\#gno \\\\#gno", "\\#gno \\\\" + gno},
+		{"\\`#gno \\[#gno", "\\`" + gno + " \\[" + gno},
+		// A link after '!' would be an image.
+		{"Wow!#gno", "Wow!#gno"},
+		// Unbalanced delimiters leave the hashtags after them as is.
+		{"a [ b #gno", "a [ b #gno"},
+		{"a ` b #gno", "a ` b #gno"},
 	}
 	for _, tc := range tests {
 		if got := linkHashtags(tc.body, len(tc.body), nil); got != tc.want {
@@ -98,6 +118,14 @@ func TestLinkHashtags(t *testing.T) {
 	thread := userPosts.addThread("#Hello there")
 	if out := thread.RenderPost("", 0); !strings.Contains(out, "[#Hello]("+tag+"hello) there") {
 		t.Fatalf("RenderPost does not link the hashtag:\n%s", out)
+	}
+
+	// sanitize.Block in RenderPost keeps the link, and the Markdown around it.
+	body := "[Search](https://example.com?q=#gno) `#gno` #gno\n```\n#gno\n```"
+	thread = userPosts.addThread(body)
+	want := "[Search](https://example.com?q=#gno) `#gno` " + gno + "\n```\n#gno\n```"
+	if out := thread.RenderPost("", 0); !strings.Contains(out, want) {
+		t.Fatalf("RenderPost does not preserve the Markdown:\n%s", out)
 	}
 }
 
