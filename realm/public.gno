@@ -353,8 +353,8 @@ func GetJsonUserByName(name string) string {
 // the number of items, not the items themselves. To get the items, see
 // GetJsonFollowers, etc.
 // The response is a JSON string.
-func GetJsonUserPostsInfo(address address) string {
-	userPosts := getUserPosts(address)
+func GetJsonUserPostsInfo(addr address) string {
+	userPosts := getUserPosts(addr)
 	if userPosts == nil {
 		return ""
 	}
@@ -371,8 +371,8 @@ func GetJsonUserPostsInfo(address address) string {
 // the list of followers. If the user address is not found, return "".
 // Limit the response to entries from startIndex up to (not including) endIndex.
 // The response is a JSON string.
-func GetJsonFollowers(address address, startIndex int, endIndex int) string {
-	userPosts := getUserPosts(address)
+func GetJsonFollowers(addr address, startIndex int, endIndex int) string {
+	userPosts := getUserPosts(addr)
 	if userPosts == nil {
 		return ""
 	}
@@ -396,8 +396,8 @@ func GetJsonFollowers(address address, startIndex int, endIndex int) string {
 // If the user address is not found, return "".
 // Limit the response to entries from startIndex up to (not including) endIndex.
 // The response is a JSON string.
-func GetJsonFollowing(address address, startIndex int, endIndex int) string {
-	userPosts := getUserPosts(address)
+func GetJsonFollowing(addr address, startIndex int, endIndex int) string {
+	userPosts := getUserPosts(addr)
 	if userPosts == nil {
 		return ""
 	}
