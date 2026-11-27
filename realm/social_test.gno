@@ -45,7 +45,7 @@ func TestParseHashtags(t *testing.T) {
 		{"#a #A #a", []string{"a"}},
 		{"(#paren) [#bracket], #comma,", []string{"paren", "bracket", "comma"}},
 		{"line1\n#next_line", []string{"next_line"}},
-		{"#café #日本 #v2", []string{"café", "日本", "v2"}},
+		{"#café #日本 #v2 é#x", []string{"café", "日本", "v2"}},
 		{"#foo#bar", []string{"foo"}},
 		{"#don't #Bob’s '#quoted'", []string{"don", "bob", "quoted"}},
 		{"issue #1 and #_ and # alone and #", nil},

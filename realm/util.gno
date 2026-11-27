@@ -147,20 +147,26 @@ func summaryOf(str string, length int) string {
 // one letter (so "#1" is not a hashtag). The '#' must be at the start of the body or follow a
 // character which is not one of these or '&', '/' or '#' (to skip "a#b", "&#39;", "/#anchor"
 // and "##a").
+// (This loop runs on every byte of the body, so keep it minimal. Only check the character before
+// a '#' when finding one.)
 func forEachHashtag(body string, fn func(start, end int)) {
 	start := -1 // The byte index after the '#' of the hashtag being scanned, or -1.
-	prev := rune(0)
 	for i, r := range body {
-		if start >= 0 && !isHashtagRune(r) {
+		if start >= 0 {
+			if isHashtagRune(r) {
+				continue
+			}
 			if hasLetter(body[start:i]) {
 				fn(start, i)
 			}
 			start = -1
 		}
-		if r == '#' && !isHashtagRune(prev) && !strings.ContainsRune("&/#", prev) {
-			start = i + 1
+		if r == '#' {
+			prev, _ := utf8.DecodeLastRuneInString(body[:i])
+			if !isHashtagRune(prev) && !strings.ContainsRune("&/#", prev) {
+				start = i + 1
+			}
 		}
-		prev = r
 	}
 	if start >= 0 && hasLetter(body[start:]) {
 		fn(start, len(body))
@@ -234,13 +240,19 @@ func linkHashtags(body string, n int, escape func(string) string) string {
 // markdownScanner tracks whether a hashtag in Markdown text is where linkHashtags can replace it
 // with a link, and not in a code span or fenced code block, in link text, or in a link
 // destination or title. This is a simple scan for the Markdown in a typical post. It is not a
-// solution for general or malformed Markdown. Unbalanced delimiters (like a stray '[' or '`')
-// leave the hashtags after them as is, and some unusual Markdown can still put a link where it
-// shows as literal text.
+// solution for general or malformed Markdown. An unbalanced delimiter (like a stray '[' or '`')
+// leaves the hashtags after it in the paragraph as is.
+// Known limitations:
+//   - A hashtag in plain brackets like "[#tag]" is not linked.
+//   - A hashtag is still linked in an autolink or bare URL, in indented code, in $math$, and after a
+//     ')' in a link title or <destination>.
+//   - sanitize.Block strips zero-width characters after this scan, which can change the context.
 type markdownScanner struct {
 	pos      int  // The index in the text where the next scan starts.
 	prev     byte // The byte before pos, or 0.
-	inCode   bool // Whether in a code span or fence.
+	codeLen  int  // The length of the run which opened the current code span or fence, or 0.
+	fence    byte // '`' or '~' in a fenced code block, or 0.
+	inLine   bool // Whether a non-space byte was seen on the current line.
 	brackets int  // The depth of '[' (link text).
 	parens   int  // The depth of '(' after ']' (a link destination and title).
 }
@@ -252,15 +264,37 @@ func (md *markdownScanner) canLink(text string, hash int, end int) bool {
 	for ; i < hash; i++ {
 		c := text[i]
 		switch {
-		case c == '`':
-			// A backtick run opens or closes a code span or fence.
-			md.inCode = !md.inCode
-			for i+1 < hash && text[i+1] == '`' {
-				i++
+		case c == '\n':
+			if !md.inLine && md.fence == 0 {
+				// A blank line ends the paragraph, so no inline construct continues past it.
+				md.codeLen, md.brackets, md.parens = 0, 0, 0
 			}
-		case md.inCode:
+			md.inLine = false
+		case c == '`' || c == '~':
+			run := 1
+			for i+1 < hash && text[i+1] == c {
+				i++
+				run++
+			}
+			switch {
+			case md.fence != 0:
+				// Only a line-start run at least as long closes a fence.
+				if c == md.fence && !md.inLine && run >= md.codeLen {
+					md.fence, md.codeLen = 0, 0
+				}
+			case md.codeLen > 0:
+				// Only a run of the same length closes a code span.
+				if c == '`' && run == md.codeLen {
+					md.codeLen = 0
+				}
+			case !md.inLine && run >= 3 && (c == '~' || !strings.Contains(restOfLine(text[i+1:]), "`")):
+				md.fence, md.codeLen = c, run
+			case c == '`':
+				md.codeLen = run
+			}
+		case md.codeLen > 0:
 			// Other bytes in code are literal.
-		case c == '\\':
+		case c == '\\' && text[i+1] != '\n':
 			i++ // Skip the escaped byte, which may be the '#'.
 		case c == '[':
 			md.brackets++
@@ -272,16 +306,28 @@ func (md *markdownScanner) canLink(text string, hash int, end int) bool {
 			md.parens--
 		}
 		md.prev = c
+		if c > ' ' {
+			md.inLine = true
+		}
 	}
 	escaped := i > hash
 	// The hashtag itself has no delimiters to scan.
 	md.pos = end
 	md.prev = text[end-1]
-	if escaped || md.inCode || md.brackets > 0 || md.parens > 0 {
+	md.inLine = true
+	if escaped || md.codeLen > 0 || md.brackets > 0 || md.parens > 0 {
 		return false
 	}
 	// A link after '!' would be an image.
 	return hash == 0 || text[hash-1] != '!'
+}
+
+// Return s up to the first newline.
+func restOfLine(s string) string {
+	if n := strings.IndexByte(s, '\n'); n >= 0 {
+		return s[:n]
+	}
+	return s
 }
 
 // Add post to gPostsByHashtag under each of its hashtags.
