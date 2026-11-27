@@ -17,7 +17,7 @@
     "@connectrpc/connect": "^2.0.3",
     "@connectrpc/connect-web": "^2.0.3",
     "@expo/vector-icons": "^15.0.2",
-    "@gnolang/gnonative": "^5.4.1",
+    "@gnolang/gnonative": "^5.4.2",
     "@reduxjs/toolkit": "^2.1.0",
     "base-64": "^1.0.0",
     "date-fns": "^3.6.0",

@@ -72,16 +72,9 @@ export default function FeedView({ totalPosts, onPress, onGnod, bech32 = "", has
       setData([...data, ...result.data]);
       console.log("startIndex: %s, limit: %s", startIndex, limit);
       setIsEndReached(endIndex <= 0);
-    } catch (error: unknown | Error | any) {
-      // TODO: Check if this is the correct error message to handle and if it's the correct way to handle it
-      // https://github.com/gnolang/gnonative/issues/117
-      if (error.message === "[unknown] invoke bridge method error: unknown: posts for userPostsAddr do not exist") {
-        setData([]);
-        return;
-      } else {
-        console.error(error);
-        setError("" + error);
-      }
+    } catch (error) {
+      console.error(error);
+      setError("" + error);
     } finally {
       setIsLoading(false);
     }

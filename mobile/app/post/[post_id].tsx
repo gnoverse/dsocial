@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
-import { useNavigation, usePathname, useRouter } from "expo-router";
+import { useNavigation, useRouter } from "expo-router";
 import Text from "@gno/components/text";
-import { broadcastTxCommit, clearLinking, gnodTxAndRedirectToSign, replyTxAndRedirectToSign, selectAccount, selectPostToReply, selectQueryParamsTxJsonSigned, useAppDispatch, useAppSelector } from "@gno/redux";
+import { gnodTxAndRedirectToSign, replyTxAndRedirectToSign, selectAccount, selectPostToReply, useAppSelector } from "@gno/redux";
 import Layout from "@gno/components/layout";
 import TextInput from "@gno/components/textinput";
 import Button from "@gno/components/button";
@@ -11,25 +11,20 @@ import { PostRow } from "@gno/components/feed/post-row";
 import { FlatList, KeyboardAvoidingView, View } from "react-native";
 import { Post } from "@gno/types";
 import { useFeed } from "@gno/hooks/use-feed";
+import { useWalletTx } from "@gno/hooks/use-wallet-tx";
 
 function Page() {
   const [replyContent, setReplyContent] = useState("");
   const [error, setError] = useState<string | undefined>(undefined);
   const [loading, setLoading] = useState<string | undefined>(undefined);
-  const [posting, setPosting] = useState<boolean>(false);
   const [thread, setThread] = useState<Post[]>([]);
 
   const post = useAppSelector(selectPostToReply);
-  const txJsonSigned = useAppSelector(selectQueryParamsTxJsonSigned);
   const account = useAppSelector(selectAccount);
   const navigation = useNavigation();
 
   const feed = useFeed();
   const router = useRouter();
-
-  const pathName = usePathname();
-
-  const dispatch = useAppDispatch();
 
   useEffect(() => {
     const unsubscribe = navigation.addListener("focus", async () => {
@@ -41,25 +36,6 @@ function Page() {
   useEffect(() => {
     fetchData();
   }, [post]);
-
-  useEffect(() => {
-
-    (async () => {
-      if (txJsonSigned) {
-        console.log("txJsonSigned in [post_id] screen:", txJsonSigned);
-        const signedTx = decodeURIComponent(txJsonSigned as string)
-        try {
-          dispatch(clearLinking());
-          await dispatch(broadcastTxCommit(signedTx)).unwrap();
-        } catch (error) {
-          console.error("on broadcastTxCommit", error);
-        } finally {
-          fetchData();
-        }
-      }
-    })();
-
-  }, [txJsonSigned]);
 
   const fetchData = async () => {
     if (!post) return;
@@ -77,25 +53,23 @@ function Page() {
     }
   };
 
+  const replyTx = useWalletTx(() => {
+    setReplyContent("");
+    fetchData();
+  });
+
+  const gnodTx = useWalletTx(() => {
+    fetchData();
+  });
+
   const onPressReply = async () => {
     if (!post) return;
 
-    setLoading(undefined);
     setError(undefined);
-    setPosting(true);
 
     if (!account) throw new Error("No active account"); // never happens, but just in case
 
-    try {
-      await dispatch(replyTxAndRedirectToSign({ post, replyContent, callerAddressBech32: account.bech32, callbackPath: pathName })).unwrap();
-      setReplyContent("");
-      await fetchData();
-    } catch (error) {
-      console.error("on post screen", error);
-      setError("" + error);
-    } finally {
-      setPosting(false);
-    }
+    await replyTx.send(replyTxAndRedirectToSign({ post, replyContent, callerAddressBech32: account.bech32 }));
   };
 
   const onPressPost = (post: Post) => {
@@ -104,7 +78,7 @@ function Page() {
 
   const onGnod = async (post: Post) => {
     if (!account) throw new Error("No active account");
-    dispatch(gnodTxAndRedirectToSign({ post, callerAddressBech32: account.bech32, callbackPath: pathName }))
+    await gnodTx.send(gnodTxAndRedirectToSign({ post, callerAddressBech32: account.bech32 }));
   };
 
   if (!post || !post.user) {
@@ -152,7 +126,7 @@ function Page() {
             numberOfLines={3}
             style={{ height: 80 }}
           />
-          <Button.TouchableOpacity loading={posting} title="Reply" variant="primary" onPress={onPressReply} />
+          <Button.TouchableOpacity loading={replyTx.pending} disabled={replyTx.pending} title="Reply" variant="primary" onPress={onPressReply} />
           <Spacer space={16} />
           <Button.TouchableOpacity title="Back" onPress={() => router.back()} variant="secondary" />
           <Alert severity="error" message={error} />

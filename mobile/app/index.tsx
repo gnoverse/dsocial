@@ -1,4 +1,4 @@
-import { Alert, View } from "react-native";
+import { View } from "react-native";
 import Button from "@gno/components/button";
 import Layout from "@gno/components/layout";
 import Ruller from "@gno/components/row/Ruller";
@@ -10,7 +10,6 @@ import {
   selectAccount,
   selectBech32AddressSelected,
   selectLoginLoading,
-  selectRemoteURL,
   setLinkingData,
   setProfileAccountName,
   useAppDispatch,
@@ -20,26 +19,30 @@ import Spacer from "@gno/components/spacer";
 import * as Application from "expo-application";
 import { useEffect } from "react";
 import { useRouter } from "expo-router";
-import { useIndexerContext } from "@gno/provider/indexer-provider";
+import { useActiveNetwork } from "@gno/utils/network-store";
 
 export default function Root() {
   const dispatch = useAppDispatch();
   const route = useRouter();
   const bech32AddressSelected = useAppSelector(selectBech32AddressSelected);
-  const remoteURL = useAppSelector(selectRemoteURL);
   const account = useAppSelector(selectAccount);
   const loading = useAppSelector(selectLoginLoading);
 
-  const { initIndexer } = useIndexerContext();
+  const network = useActiveNetwork();
 
   const appVersion = Application.nativeApplicationVersion;
 
   useEffect(() => {
-    if (loading || !bech32AddressSelected || !remoteURL) return;
+    if (loading || !bech32AddressSelected) return;
     console.log("bech32AddressSelected on index", bech32AddressSelected);
-    // TODO: The remote indexer should come from the local network config.
-    initIndexer("https://indexer.gno.berty.io");
-    dispatch(loggedIn());
+    (async () => {
+      try {
+        await dispatch(loggedIn()).unwrap();
+      } catch {
+        // Already reported. Clear the address so that the same one can be selected again.
+        dispatch(clearLinking());
+      }
+    })();
   }, [bech32AddressSelected]);
 
   useEffect(() => {
@@ -54,22 +57,13 @@ export default function Root() {
   }, [account]);
 
   const signinUsingGnokey = async () => {
-    await dispatch(requestLoginForGnokeyMobile()).unwrap();
+    await dispatch(requestLoginForGnokeyMobile());
   };
 
   const browseAsGuest = () => {
-    // TODO: Properly use the local network config and set up the account as not signed in.
-    // For now, bypass the round trip to Gnokey Mobile by simulating its sign-in callback.
-    // TODO: After the sign-in flow is updated, make sure tapping this again in the same session (e.g. after
-    // signing out) signs in again. Currently it doesn't, because clearLinking doesn't reset bech32AddressSelected
-    // (it reassigns `state` instead of returning initialState), so the sign-in effect doesn't re-run.
-    dispatch(setLinkingData({
-      queryParams: {
-        address: "g1jg8mtutu9khhfwc4nxmuhcpftf0pajdhfvsqf5",
-        chain_id: "dev",
-        remote: "tcp://127.0.0.1:26657",
-      },
-    }));
+    // TODO: Set up the account as not signed in. For now, bypass the round trip to Gnokey Mobile by
+    // simulating its answer.
+    dispatch(setLinkingData({ address: "g1jg8mtutu9khhfwc4nxmuhcpftf0pajdhfvsqf5" }));
   };
 
   return (
@@ -96,6 +90,12 @@ export default function Root() {
             <View style={{ flex: 1, height: 2, backgroundColor: "#e7e7e7" }} />
           </View>
           <Button.TouchableOpacity title="Browse as Guest" onPress={browseAsGuest} variant="primary-green" />
+          <Spacer />
+          <Button.TouchableOpacity
+            title={`Network: ${network.label}`}
+            onPress={() => route.navigate("/network")}
+            variant="secondary"
+          />
         </Layout.BodyAlignedBotton>
       </Layout.Container>
     </>

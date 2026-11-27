@@ -27,8 +27,14 @@ export const useUserCache = () => {
       username = userJson.name;
     }
 
-    const response = await gnonative.qEval("gno.land/r/demo/profile", `GetStringField("${bech32}","Avatar", "${DEFAULT_AVATAR}")`);
-    const bech32Image = response.substring(2, response.length - "\" string)".length);
+    let bech32Image = DEFAULT_AVATAR;
+    try {
+      const response = await gnonative.qEval("gno.land/r/demo/profile", `GetStringField("${bech32}","Avatar", "${DEFAULT_AVATAR}")`);
+      bech32Image = response.substring(2, response.length - "\" string)".length);
+    } catch (error) {
+      // The profile realm isn't deployed on every network.
+      console.log("No avatar for %s", bech32, error);
+    }
 
     const user = {
       name: username,

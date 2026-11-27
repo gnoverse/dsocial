@@ -1,5 +1,5 @@
 import { ParentPost, Post, User } from "@gno/types";
-import { useGnoNativeContext } from "@gnolang/gnonative";
+import { ErrCode, errDetailOf, useGnoNativeContext } from "@gnolang/gnonative";
 import { useUserCache } from "./use-user-cache";
 import useGnoJsonParser from "./use-gno-json-parser";
 import { useIndexerContext } from "@gno/provider/indexer-provider";
@@ -11,6 +11,12 @@ interface ThreadPosts {
   n_posts: number;
 }
 
+// The realm panics for a user who never posted or followed, instead of returning an empty list.
+const isNoUserPosts = (error: unknown): boolean => {
+  const detail = errDetailOf(error);
+  return detail?.code === ErrCode.ErrChainRejected && detail.message === "posts for userPostsAddr do not exist";
+};
+
 export const useFeed = () => {
   const { gnonative } = useGnoNativeContext();
   const cache = useUserCache();
@@ -18,11 +24,14 @@ export const useFeed = () => {
   const indexer = useIndexerContext();
 
   async function fetchThreadPosts(address: string, startIndex: number, endIndex: number): Promise<ThreadPosts> {
-
-    const result = await gnonative.qEval("gno.land/r/berty/social", `GetThreadPosts("${address}",0, 0, ${startIndex}, ${endIndex})`);
-    const json = await enrichData(result);
-
-    return json;
+    let result;
+    try {
+      result = await gnonative.qEval("gno.land/r/berty/social", `GetThreadPosts("${address}",0, 0, ${startIndex}, ${endIndex})`);
+    } catch (error) {
+      if (isNoUserPosts(error)) return { data: [], n_posts: 0 };
+      throw error;
+    }
+    return await enrichData(result);
   }
 
   // Get the posts with the hashtag (without the '#'). Set startIndex and endIndex to 0 to just get n_posts.

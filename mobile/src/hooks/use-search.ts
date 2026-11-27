@@ -17,17 +17,18 @@ export const useSearch = () => {
   async function GetJsonFollowers(address: string) {
 
     const result = await gnonative.qEval("gno.land/r/berty/social", `GetJsonFollowers("${address}", 0, 1000)`);
-    const json = (await convertToJson(result)) as GetJsonFollowersResult;
+    const json = (await convertToJson(result)) as GetJsonFollowersResult | undefined;
 
-    return json;
+    // The realm returns "" for a user who never posted or followed.
+    return json ?? { n_followers: 0, followers: [] };
   }
 
   async function GetJsonFollowing(address: string) {
 
     const result = await gnonative.qEval("gno.land/r/berty/social", `GetJsonFollowing("${address}", 0, 1000)`);
-    const json = (await convertToJson(result)) as GetJsonFollowingResult;
+    const json = (await convertToJson(result)) as GetJsonFollowingResult | undefined;
 
-    return json;
+    return json ?? { n_following: 0, following: [] };
   }
 
   async function getJsonUserByName(username: string) : Promise<User | undefined> {

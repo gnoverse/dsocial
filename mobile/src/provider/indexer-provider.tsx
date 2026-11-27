@@ -1,5 +1,6 @@
-import { createContext, useContext, useState } from "react";
+import { createContext, useContext, useMemo } from "react";
 import * as Grpc from "@gno/grpc/client";
+import { useActiveNetwork } from "@gno/utils/network-store";
 
 import { Client } from "@connectrpc/connect";
 import { HelloResponse, HelloStreamResponse, UserAndPostID } from "@buf/gnolang_dsocial-indexer.bufbuild_es/indexerservice_pb";
@@ -9,7 +10,6 @@ export interface IndexerContextProps {
   getHomePosts: (userPostAddr: string, startIndex: bigint, endIndex: bigint) => Promise<[number, string]>;
   hello: (name: string) => Promise<HelloResponse>;
   helloStream: (name: string) => Promise<AsyncIterable<HelloStreamResponse>>;
-  initIndexer: (indexerUrl: string) => void;
   indexerInstance?: Client<typeof IndexerService>;
 }
 
@@ -20,19 +20,12 @@ interface IndexerProviderProps {
 const IndexerContext = createContext<IndexerContextProps | null>(null);
 
 const IndexerProvider: React.FC<IndexerProviderProps> = ({ children }) => {
-  const [clientInstance, setClientInstance] = useState<Client<typeof IndexerService> | undefined>(undefined);
-
-  const initIndexer = (indexerUrl: string) => {
-    if (!indexerUrl) {
-      throw new Error("indexerUrl is required to initialize indexer client.");
-    }
-    setClientInstance(Grpc.createIndexerClient(indexerUrl));
-    console.log("Indexer client initialized with URL:", indexerUrl);
-  };
+  const { indexer, label } = useActiveNetwork();
+  const clientInstance = useMemo(() => (indexer ? Grpc.createIndexerClient(indexer) : undefined), [indexer]);
 
   const getClient = () => {
     if (!clientInstance) {
-      throw new Error("indexer client instance not initialized.");
+      throw new Error(`No indexer is set for the network "${label}".`);
     }
 
     return clientInstance;
@@ -78,7 +71,6 @@ const IndexerProvider: React.FC<IndexerProviderProps> = ({ children }) => {
     getHomePosts,
     hello,
     helloStream,
-    initIndexer,
     indexerInstance: clientInstance,
   };
 

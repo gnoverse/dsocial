@@ -15,7 +15,8 @@ function useProtectedRoute(user: User | undefined) {
   const router = useRouter();
   const [segment] = useSegments() as [SharedSegment];
 
-  const unauthSegments = ["sign-up", "sign-in"];
+  // The network must be selectable before signing in, since the connect request names it.
+  const unauthSegments = ["sign-up", "sign-in", "network"];
 
   React.useEffect(() => {
     const inAuthGroup = segments.length <= 0 || unauthSegments.includes(segments[0]);

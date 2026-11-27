@@ -1,18 +1,16 @@
 import { useCallback, useEffect, useState } from "react";
-import { router, useLocalSearchParams, useNavigation, usePathname } from "expo-router";
+import { router, useLocalSearchParams, useNavigation } from "expo-router";
 import { HashtagView } from "@gno/components/view";
 import { Post } from "@gno/types";
 import {
-  broadcastTxCommit,
-  clearLinking,
   gnodTxAndRedirectToSign,
   selectAccount,
-  selectQueryParamsTxJsonSigned,
   setPostToReply,
   useAppDispatch,
   useAppSelector,
 } from "@gno/redux";
 import { useFeed } from "@gno/hooks/use-feed";
+import { useWalletTx } from "@gno/hooks/use-wallet-tx";
 import ErrorView from "@gno/components/view/account/no-account-view";
 import Layout from "@gno/components/layout";
 
@@ -30,26 +28,6 @@ export default function Page() {
   const dispatch = useAppDispatch();
 
   const currentUser = useAppSelector(selectAccount);
-  const txJsonSigned = useAppSelector(selectQueryParamsTxJsonSigned);
-
-  const pathName = usePathname();
-
-  useEffect(() => {
-    (async () => {
-      if (txJsonSigned) {
-        console.log("txJsonSigned in hashtag page: ", txJsonSigned);
-        const signedTx = decodeURIComponent(txJsonSigned as string);
-        try {
-          await dispatch(broadcastTxCommit(signedTx)).unwrap();
-        } catch (error) {
-          console.error("on broadcastTxCommit", error);
-        }
-
-        dispatch(clearLinking());
-        fetchData();
-      }
-    })();
-  }, [txJsonSigned]);
 
   useEffect(() => {
     const unsubscribe = navigation.addListener("focus", async () => {
@@ -75,13 +53,15 @@ export default function Page() {
     }
   }, [hashtag]);
 
+  const gnodTx = useWalletTx(() => {
+    fetchData();
+  });
+
   const onGnod = async (post: Post) => {
     console.log("gnodding post: ", post);
-    setLoading("Gnoding...");
-
     if (!currentUser) throw new Error("No active account");
 
-    dispatch(gnodTxAndRedirectToSign({ post, callerAddressBech32: currentUser.bech32, callbackPath: pathName })).unwrap();
+    await gnodTx.send(gnodTxAndRedirectToSign({ post, callerAddressBech32: currentUser.bech32 }));
   };
 
   const onPressPost = async (item: Post) => {
